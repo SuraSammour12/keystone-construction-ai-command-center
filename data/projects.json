@@ -1,0 +1,43 @@
+{
+  "projects": [
+    {
+      "id": "PRJ-001",
+      "name": "Alpha Tower",
+      "type": "Commercial High-Rise",
+      "location": "Downtown District",
+      "start_date": "2024-01-15",
+      "planned_end_date": "2025-06-30",
+      "status": "In Progress",
+      "project_manager": "Ahmad Khalil",
+      "client": "Gulf Development Corp",
+      "total_budget": 2000000,
+      "description": "15-story commercial tower with underground parking"
+    },
+    {
+      "id": "PRJ-002",
+      "name": "Beta Mall",
+      "type": "Commercial Retail",
+      "location": "East Side",
+      "start_date": "2024-03-01",
+      "planned_end_date": "2025-12-31",
+      "status": "In Progress",
+      "project_manager": "Sara Mansour",
+      "client": "City Retail Holdings",
+      "total_budget": 5000000,
+      "description": "3-floor shopping mall with food court and cinema"
+    },
+    {
+      "id": "PRJ-003",
+      "name": "Gamma Residences",
+      "type": "Residential Complex",
+      "location": "North Suburb",
+      "start_date": "2024-06-01",
+      "planned_end_date": "2026-03-31",
+      "status": "In Progress",
+      "project_manager": "Omar Haddad",
+      "client": "HomeFirst Developers",
+      "total_budget": 8000000,
+      "description": "4 residential buildings, 200 units total, with shared amenities"
+    }
+  ]
+}

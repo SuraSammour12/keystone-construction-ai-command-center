@@ -1,0 +1,10 @@
+{
+  "contractors": [
+    {"id": "CON-001", "name": "SteelWorks Ltd", "specialty": "Structural Steel", "project_ids": ["PRJ-001"], "contact_email": "billing@steelworks.com", "performance_rating": 4.2, "total_invoiced": 450000},
+    {"id": "CON-002", "name": "CityElectric Co", "specialty": "Electrical Systems", "project_ids": ["PRJ-001", "PRJ-002"], "contact_email": "projects@cityelectric.com", "performance_rating": 4.5, "total_invoiced": 280000},
+    {"id": "CON-003", "name": "SafetyFirst Inc", "specialty": "Fire & Safety Systems", "project_ids": ["PRJ-001"], "contact_email": "contracts@safetyfirst.com", "performance_rating": 4.8, "total_invoiced": 65000},
+    {"id": "CON-004", "name": "BuildRight LLC", "specialty": "General Construction", "project_ids": ["PRJ-002"], "contact_email": "info@buildright.com", "performance_rating": 3.9, "total_invoiced": 1200000},
+    {"id": "CON-005", "name": "DeepDig Excavation", "specialty": "Excavation & Earthworks", "project_ids": ["PRJ-003"], "contact_email": "ops@deepdig.com", "performance_rating": 4.0, "total_invoiced": 320000},
+    {"id": "CON-006", "name": "GreenEnviro Consulting", "specialty": "Environmental Consulting", "project_ids": ["PRJ-003"], "contact_email": "hello@greenenviro.com", "performance_rating": 4.6, "total_invoiced": 95000}
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "budgets": [
+    {
+      "project_id": "PRJ-001",
+      "total_budget": 2000000,
+      "spent_to_date": 2300000,
+      "remaining": -300000,
+      "last_updated": "2025-05-01",
+      "breakdown": [
+        {"category": "Materials", "budgeted": 800000, "actual": 980000, "note": "Steel prices increased 22% since project start"},
+        {"category": "Labor", "budgeted": 600000, "actual": 650000, "note": "Overtime due to Phase 2 delays"},
+        {"category": "Equipment", "budgeted": 300000, "actual": 310000, "note": "On track"},
+        {"category": "Subcontractors", "budgeted": 200000, "actual": 260000, "note": "Additional waterproofing contractor hired"},
+        {"category": "Permits & Fees", "budgeted": 50000, "actual": 55000, "note": "Zoning amendment fee added"},
+        {"category": "Contingency", "budgeted": 50000, "actual": 45000, "note": "Partially used"}
+      ],
+      "invoices_pending": [
+        {"id": "INV-1001", "contractor": "SteelWorks Ltd", "amount": 120000, "due_date": "2025-05-15", "status": "Pending Approval"},
+        {"id": "INV-1002", "contractor": "CityElectric Co", "amount": 45000, "due_date": "2025-05-20", "status": "Pending Approval"},
+        {"id": "INV-1003", "contractor": "SafetyFirst Inc", "amount": 8000, "due_date": "2025-05-25", "status": "Approved"}
+      ]
+    },
+    {
+      "project_id": "PRJ-002",
+      "total_budget": 5000000,
+      "spent_to_date": 3100000,
+      "remaining": 1900000,
+      "last_updated": "2025-05-01",
+      "breakdown": [
+        {"category": "Materials", "budgeted": 2000000, "actual": 1200000, "note": "On track"},
+        {"category": "Labor", "budgeted": 1200000, "actual": 900000, "note": "Under budget - efficient crew"},
+        {"category": "Equipment", "budgeted": 600000, "actual": 450000, "note": "Leased instead of purchased"},
+        {"category": "Subcontractors", "budgeted": 800000, "actual": 400000, "note": "Phase 2 subs not yet engaged"},
+        {"category": "Permits & Fees", "budgeted": 200000, "actual": 100000, "note": "Remaining permits pending"},
+        {"category": "Contingency", "budgeted": 200000, "actual": 50000, "note": "Minor use only"}
+      ],
+      "invoices_pending": [
+        {"id": "INV-2001", "contractor": "BuildRight LLC", "amount": 200000, "due_date": "2025-05-10", "status": "Pending Approval"}
+      ]
+    },
+    {
+      "project_id": "PRJ-003",
+      "total_budget": 8000000,
+      "spent_to_date": 2500000,
+      "remaining": 5500000,
+      "last_updated": "2025-05-01",
+      "breakdown": [
+        {"category": "Materials", "budgeted": 3200000, "actual": 1000000, "note": "Early phase - foundation materials only"},
+        {"category": "Labor", "budgeted": 2000000, "actual": 700000, "note": "On track"},
+        {"category": "Equipment", "budgeted": 1000000, "actual": 400000, "note": "Heavy machinery leased"},
+        {"category": "Subcontractors", "budgeted": 1200000, "actual": 200000, "note": "Only excavation sub engaged so far"},
+        {"category": "Permits & Fees", "budgeted": 300000, "actual": 150000, "note": "Environmental assessment completed"},
+        {"category": "Contingency", "budgeted": 300000, "actual": 50000, "note": "Soil remediation unexpected cost"}
+      ],
+      "invoices_pending": [
+        {"id": "INV-3001", "contractor": "DeepDig Excavation", "amount": 85000, "due_date": "2025-05-12", "status": "Approved"},
+        {"id": "INV-3002", "contractor": "GreenEnviro Consulting", "amount": 32000, "due_date": "2025-05-18", "status": "Pending Approval"}
+      ]
+    }
+  ]
+}

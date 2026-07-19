@@ -1,0 +1,40 @@
+{
+  "schedules": [
+    {
+      "project_id": "PRJ-001",
+      "phases": [
+        {"phase": "Phase 1 - Foundation", "planned_start": "2024-01-15", "planned_end": "2024-06-30", "actual_start": "2024-01-15", "actual_end": "2024-07-15", "status": "Completed", "delay_days": 15, "delay_reason": "Unexpected rock layer during excavation"},
+        {"phase": "Phase 2 - Structure", "planned_start": "2024-07-01", "planned_end": "2024-12-31", "actual_start": "2024-07-20", "actual_end": null, "status": "In Progress - Delayed", "delay_days": 21, "delay_reason": "Permit approval delayed by city council"},
+        {"phase": "Phase 3 - MEP Systems", "planned_start": "2025-01-01", "planned_end": "2025-03-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 4 - Finishing", "planned_start": "2025-04-01", "planned_end": "2025-06-30", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null}
+      ],
+      "overall_delay_days": 36,
+      "projected_end_date": "2025-08-05",
+      "critical_path_items": ["Structural steel delivery", "Elevator shaft completion", "Fire system inspection"]
+    },
+    {
+      "project_id": "PRJ-002",
+      "phases": [
+        {"phase": "Phase 1 - Site Prep & Foundation", "planned_start": "2024-03-01", "planned_end": "2024-08-31", "actual_start": "2024-03-01", "actual_end": "2024-08-20", "status": "Completed", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 2 - Structure & Envelope", "planned_start": "2024-09-01", "planned_end": "2025-04-30", "actual_start": "2024-09-01", "actual_end": null, "status": "In Progress - On Track", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 3 - Interior & Fit-out", "planned_start": "2025-05-01", "planned_end": "2025-10-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 4 - Commissioning", "planned_start": "2025-11-01", "planned_end": "2025-12-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null}
+      ],
+      "overall_delay_days": 0,
+      "projected_end_date": "2025-12-31",
+      "critical_path_items": ["Glass facade delivery", "HVAC system installation"]
+    },
+    {
+      "project_id": "PRJ-003",
+      "phases": [
+        {"phase": "Phase 1 - Excavation & Foundation", "planned_start": "2024-06-01", "planned_end": "2024-12-31", "actual_start": "2024-06-15", "actual_end": null, "status": "In Progress - Delayed", "delay_days": 30, "delay_reason": "Contaminated soil required remediation before excavation could proceed"},
+        {"phase": "Phase 2 - Building A & B Structure", "planned_start": "2025-01-01", "planned_end": "2025-08-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 3 - Building C & D Structure", "planned_start": "2025-06-01", "planned_end": "2025-12-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null},
+        {"phase": "Phase 4 - MEP & Finishing All Buildings", "planned_start": "2025-09-01", "planned_end": "2026-03-31", "actual_start": null, "actual_end": null, "status": "Not Started", "delay_days": 0, "delay_reason": null}
+      ],
+      "overall_delay_days": 30,
+      "projected_end_date": "2026-04-30",
+      "critical_path_items": ["Soil remediation completion", "Building permits for B/C/D", "Utility connections"]
+    }
+  ]
+}
