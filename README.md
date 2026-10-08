@@ -102,24 +102,24 @@ flowchart TB
         LP["Art Deco Landing<br/>keystone.html"]
         UI["React Console<br/>Dashboard · Chat · Invoices · Approvals · Audit"]
     end
-    subgraph App["APPLICATION — Flask REST"]
+    subgraph App["APPLICATION - Flask REST"]
         R["api/routes.py<br/>/chat · /approvals · /invoices · /dashboard · /roi · /audit"]
     end
-    subgraph Brain["ORCHESTRATION — LangGraph"]
+    subgraph Brain["ORCHESTRATION - LangGraph"]
         ORC["Orchestrator<br/>intent routing + abstention"]
         RPT["Report pipeline<br/>Evaluator–Optimizer + Grounding"]
         TRF["Transfer pipeline<br/>Human-in-the-Loop"]
         EML["Email pipeline<br/>Human-in-the-Loop"]
         RISK["Risk Agent<br/>ReAct, autonomous tool calls"]
     end
-    subgraph Trust["TRUST LAYER — pure Python, no LLM"]
+    subgraph Trust["TRUST LAYER - pure Python, no LLM"]
         FC["finance_core.py<br/>budget · variance · reconcile · solvency"]
         GR["grounding.py<br/>figure verifier"]
         LED["services/ledger.py<br/>writeback · audit · idempotency"]
         ROIc["roi.py<br/>value instrumentation"]
     end
     subgraph Store["SYSTEM OF RECORD"]
-        DB[("SQLite — keystone.db<br/>projects · budget_lines · purchase_orders<br/>invoices · ledger_entries · audit_log · roi_events")]
+        DB[("SQLite - keystone.db<br/>projects · budget_lines · purchase_orders<br/>invoices · ledger_entries · audit_log · roi_events")]
         CP[("LangGraph checkpointer<br/>SqliteSaver")]
     end
     LLM["Groq LLM<br/>gpt-oss-120b / 20b · temperature 0"]
@@ -176,12 +176,12 @@ flowchart TD
 
     O -->|transfer| CK{Solvency check<br/>finance_core}
     CK -->|would go insolvent| REJ["Blocked by rule<br/>+ audit entry"]
-    CK -->|safe| H1[[Interrupt — human approval]]
+    CK -->|safe| H1[[Interrupt - human approval]]
     H1 -->|approved| WB[Ledger writeback<br/>two entries + audit + ROI]
     H1 -->|rejected| N1["No change<br/>+ audit entry"]
     WB --> OUT2([Both budgets updated on dashboard])
 
-    O -->|email| DR[Draft email] --> H2[[Interrupt — human approval]]
+    O -->|email| DR[Draft email] --> H2[[Interrupt - human approval]]
     H2 -->|approved| SENT([Logged as sent + ROI])
     H2 -->|rejected| N2[Discarded]
 
@@ -207,7 +207,7 @@ This is the core of the project. Keystone layers five independent defences so th
 flowchart LR
     REQ([Request]) --> M["LLM proposes<br/>language + intent"]
     M --> C{"Deterministic core<br/>decides EVERY number"}
-    DB[(SQLite — single source of truth)] --> C
+    DB[(SQLite - single source of truth)] --> C
     C --> V["Grounding verifier<br/>regex-extract every $ figure<br/>and match it to the DB"]
     DB --> V
     V -->|any figure not in DB| M
@@ -293,19 +293,19 @@ Asked about a project that does not exist, Keystone refuses to invent one.
 
 ![Keystone answering that Delta Plaza is not in the records and listing the real projects](docs/screenshots/abstention.png)
 
-### Human-in-the-loop — a budget transfer
+### Human-in-the-loop - a budget transfer
 
 A transfer pauses for approval with a deterministic solvency check and an AI impact analysis. Here the `$950,000` move from Beta Mall eliminates Alpha Tower's `$300,000` deficit and leaves a `$650,000` surplus, all figures computed in code.
 
 ![Approvals card for a $950,000 budget transfer from Beta Mall to Alpha Tower](docs/screenshots/transfer-approval.png)
 
-### Human-in-the-loop — an outbound email
+### Human-in-the-loop - an outbound email
 
 Drafting an external email also stops for review, tagged by sensitivity.
 
 ![Approvals card showing a drafted email to a contractor awaiting approval](docs/screenshots/email-hitl.png)
 
-### Invoice automation — catching an overbill on its own
+### Invoice automation - catching an overbill on its own
 
 Keystone reads the invoice, reconciles it against its purchase order and the project's remaining budget, and flags the discrepancy without being told to.
 
@@ -331,9 +331,9 @@ Every executed action is written to the ledger and the audit log, and the ROI ba
 
 Every generated report can be exported to a clean, typeset PDF directly from the chat, built client-side with jsPDF so there is no print dialog and no server round-trip. Three sample exports are included so they can be opened without running the app:
 
-- [Alpha Tower report](docs/reports/alpha-tower-report.pdf) — a Critical project, 15% over budget
-- [Beta Mall report](docs/reports/beta-mall-report.pdf) — a healthy project, on track
-- [Gamma Residences report](docs/reports/gamma-residences-report.pdf) — an At Risk project
+- [Alpha Tower report](docs/reports/alpha-tower-report.pdf) - a Critical project, 15% over budget
+- [Beta Mall report](docs/reports/beta-mall-report.pdf) - a healthy project, on track
+- [Gamma Residences report](docs/reports/gamma-residences-report.pdf) - an At Risk project
 
 Every dollar figure in these PDFs is grounded against the database by the verifier in `evaluators/grounding.py`.
 
@@ -361,11 +361,11 @@ construction-ai-command-center/
 ├── api/                 # Flask REST layer (routes.py, app.py)
 ├── workflows/           # LangGraph orchestration (main_graph.py)
 ├── agents/              # Budget, schedule, risk (ReAct), report agents
-├── evaluators/          # grounding.py — the figure verifier
-├── services/            # ledger.py — writeback, audit, idempotency
+├── evaluators/          # grounding.py - the figure verifier
+├── services/            # ledger.py - writeback, audit, idempotency
 ├── tools/               # finance_core.py, roi.py, db.py, data_loader.py
 ├── data/                # synthetic seed JSON (projects, budgets, invoices)
-├── tests/               # test_finance.py — 11 passing tests
+├── tests/               # test_finance.py - 11 passing tests
 ├── frontend/            # React console (Keystone design system)
 ├── img/                 # logo and visual assets
 ├── docs/                # screenshots and sample exported reports
@@ -419,12 +419,12 @@ The engineering choices above are grounded in published work. Figures quoted in 
 
 **Anti-hallucination and agent design**
 
-1. Dhuliawala, S. et al. (2023). *Chain-of-Verification Reduces Hallucination in Large Language Models.* arXiv:2309.11495. — the verify-then-regenerate gate.
-2. Ji, Z. et al. (2023). *Survey of Hallucination in Natural Language Generation.* ACM Computing Surveys. arXiv:2202.03629. — why grounding and abstention matter.
-3. Lewis, P. et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* NeurIPS. arXiv:2005.11401. — grounding generation on retrieved structured data.
-4. Yao, S. et al. (2023). *ReAct: Synergizing Reasoning and Acting in Language Models.* ICLR. arXiv:2210.03629. — the risk agent's reason-and-act tool loop.
+1. Dhuliawala, S. et al. (2023). *Chain-of-Verification Reduces Hallucination in Large Language Models.* arXiv:2309.11495. - the verify-then-regenerate gate.
+2. Ji, Z. et al. (2023). *Survey of Hallucination in Natural Language Generation.* ACM Computing Surveys. arXiv:2202.03629. - why grounding and abstention matter.
+3. Lewis, P. et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* NeurIPS. arXiv:2005.11401. - grounding generation on retrieved structured data.
+4. Yao, S. et al. (2023). *ReAct: Synergizing Reasoning and Acting in Language Models.* ICLR. arXiv:2210.03629. - the risk agent's reason-and-act tool loop.
 5. Wei, J. et al. (2022). *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.* NeurIPS. arXiv:2201.11903.
-6. Anthropic (2024). *Building Effective Agents.* — orchestrator-workers and evaluator-optimizer patterns.
+6. Anthropic (2024). *Building Effective Agents.* - orchestrator-workers and evaluator-optimizer patterns.
 7. LangGraph documentation. *Human-in-the-loop with interrupt and checkpointers.*
 
 **Construction industry context**
