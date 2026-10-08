@@ -1,390 +1,450 @@
-# Construction AI Command Center
+<div align="center">
 
-A multi-agent AI system for construction project management. Built with LangGraph, Flask, and React. The system uses 6 specialized AI agents orchestrated through advanced design patterns to analyze budgets, track schedules, assess risks, draft communications, and manage financial transfers - all with built-in quality control and human oversight.
+<img src="img/logo.png" width="118" alt="Keystone logo" />
 
-![Dashboard](screenshots/dashboard-alpha.png)
+# KEYSTONE
 
----
+### Construction AI Command Center
 
-## Table of Contents
+**An operator, not a narrator.** A grounded, auditable multi-agent system that reads a live system of record, reasons over it, and *acts* on it under human control.
 
-- [Overview](#overview)
-- [Architecture and Design Patterns](#architecture-and-design-patterns)
-- [Agents](#agents)
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Setup and Installation](#setup-and-installation)
-- [API Endpoints](#api-endpoints)
-- [Key Design Decisions](#key-design-decisions)
+<br/>
 
----
+![Version](https://img.shields.io/badge/version-1.0.0-C7A24C?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.11-4FA396?style=flat-square&logo=python&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-0.2-1A212D?style=flat-square)
+![React](https://img.shields.io/badge/React-18-4FA396?style=flat-square&logo=react&logoColor=white)
+![Groq](https://img.shields.io/badge/LLM-Groq%20gpt--oss-C65A3C?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-11%20passing-4FA396?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-C7A24C?style=flat-square)
 
-## Overview
-
-Construction projects involve complex coordination between budgets, schedules, contractors, and risk management. This system replaces manual analysis with an AI-powered command center where a project manager can ask questions in natural language and receive comprehensive, quality-checked responses.
-
-The system is not a simple chatbot. It is a multi-agent orchestration system where each request is routed to specialized agents, evaluated for quality, and flagged for human approval when necessary.
+</div>
 
 ---
 
-## Architecture and Design Patterns
+## Table of contents
 
-This project implements three core Agentic AI design patterns. Each pattern solves a specific problem in building reliable AI systems.
+- [What Keystone is](#what-keystone-is)
+- [The problem it solves](#the-problem-it-solves)
+- [Narrator vs operator](#narrator-vs-operator)
+- [System architecture](#system-architecture)
+- [How a request flows](#how-a-request-flows)
+- [Anti-hallucination engineering](#anti-hallucination-engineering)
+- [The deterministic finance core](#the-deterministic-finance-core)
+- [Human-in-the-loop](#human-in-the-loop)
+- [ROI instrumentation](#roi-instrumentation)
+- [Feature walkthrough](#feature-walkthrough)
+- [Exported reports](#exported-reports)
+- [Technology stack](#technology-stack)
+- [Project structure](#project-structure)
+- [Getting started](#getting-started)
+- [Testing](#testing)
+- [Research and references](#research-and-references)
+- [A note on honesty](#a-note-on-honesty)
+- [License](#license)
 
-### Pattern 1: Orchestrator
+---
 
-The Orchestrator pattern uses a central manager agent that receives user requests, determines what type of task it is, and routes it to the appropriate specialized agents.
+## What Keystone is
 
-When a user sends a request, the Orchestrator agent analyzes the message and classifies it into one of four task types:
+Keystone is a decision-support and automation layer for construction portfolio management. A project director asks a question in plain language, or requests an action, and Keystone:
 
-- **report** - Routes to Budget Agent, Schedule Agent, Risk Agent, then Report Agent
-- **email** - Routes to Email Agent
-- **transfer** - Routes to Budget Transfer Agent
-- **status** - Routes directly to data retrieval with no LLM needed
+- **reads** the live project ledger (budgets, purchase orders, invoices, schedule),
+- **reasons** over it with specialised AI agents,
+- **verifies** every figure it states against the database,
+- **pauses** for human approval before anything with financial consequence,
+- **executes** the approved action by writing to the system of record with a full audit trail, and
+- **measures** the time and money each automated action saved.
 
-The Orchestrator never does the actual analysis. It only decides who should do it and in what order. This separation ensures each agent can focus on its specialty.
+The intelligence is real. The numbers are deterministic. Those two sentences are the entire design philosophy, and the rest of this document explains how they are enforced in code.
 
+---
+
+## The problem it solves
+
+Construction is one of the least digitised major industries, and the cost is measurable. The McKinsey Global Institute estimates that construction labour-productivity growth has averaged roughly a third of the total-economy average over the past two decades, and that the sector could raise productivity and value substantially through better information flow and decision-making (see [references](#research-and-references)).
+
+Day to day, that gap shows up as manual, error-prone back-office work:
+
+- project managers assembling status reports by hand from scattered spreadsheets,
+- invoices paid without being reconciled against their purchase orders,
+- budget transfers approved over email with no solvency check and no audit trail,
+- and no systematic record of *why* a decision was made.
+
+Keystone targets exactly these workflows, and treats a wrong number as a safety failure rather than a cosmetic one.
+
+---
+
+## Narrator vs operator
+
+Most "AI assistant" demos are **narrators**: a language model is handed some data and asked to talk about it. It produces fluent prose, but it invents figures, it cannot change anything, and nothing it says is verified. That is a decoration, not a system.
+
+Keystone is built as an **operator**.
+
+| | Narrator (typical demo) | Keystone (this project) |
+|---|---|---|
+| Source of numbers | The model, from context | Deterministic Python over a live DB |
+| Can it act? | No, it only describes | Yes, it writes to the system of record |
+| Verification | None | Every figure checked against the database |
+| Unknown data | Hallucinates a plausible answer | Abstains: "not in the records" |
+| Accountability | None | Full audit log + idempotent ledger |
+| Value | Unmeasured | Instrumented ROI per action |
+
+---
+
+## System architecture
+
+Four layers, with a hard rule between them: **the model layer may propose language and intent, but only the deterministic layer may originate a number, and only the deterministic layer may write to the system of record.**
+
+```mermaid
+flowchart TB
+    subgraph Client["PRESENTATION"]
+        LP["Art Deco Landing<br/>keystone.html"]
+        UI["React Console<br/>Dashboard · Chat · Invoices · Approvals · Audit"]
+    end
+    subgraph App["APPLICATION — Flask REST"]
+        R["api/routes.py<br/>/chat · /approvals · /invoices · /dashboard · /roi · /audit"]
+    end
+    subgraph Brain["ORCHESTRATION — LangGraph"]
+        ORC["Orchestrator<br/>intent routing + abstention"]
+        RPT["Report pipeline<br/>Evaluator–Optimizer + Grounding"]
+        TRF["Transfer pipeline<br/>Human-in-the-Loop"]
+        EML["Email pipeline<br/>Human-in-the-Loop"]
+        RISK["Risk Agent<br/>ReAct, autonomous tool calls"]
+    end
+    subgraph Trust["TRUST LAYER — pure Python, no LLM"]
+        FC["finance_core.py<br/>budget · variance · reconcile · solvency"]
+        GR["grounding.py<br/>figure verifier"]
+        LED["services/ledger.py<br/>writeback · audit · idempotency"]
+        ROIc["roi.py<br/>value instrumentation"]
+    end
+    subgraph Store["SYSTEM OF RECORD"]
+        DB[("SQLite — keystone.db<br/>projects · budget_lines · purchase_orders<br/>invoices · ledger_entries · audit_log · roi_events")]
+        CP[("LangGraph checkpointer<br/>SqliteSaver")]
+    end
+    LLM["Groq LLM<br/>gpt-oss-120b / 20b · temperature 0"]
+
+    LP --> UI --> R --> ORC
+    ORC --> RPT & TRF & EML & RISK
+    RPT --> FC & GR
+    TRF --> FC & LED
+    EML --> LED
+    RISK --> FC
+    FC --> DB
+    LED --> DB
+    GR --> DB
+    ROIc --> DB
+    TRF --> CP
+    ORC -. proposes .-> LLM
+    RPT -. narrates .-> LLM
+    RISK -. reasons .-> LLM
+
+    classDef pres fill:#14202E,stroke:#4FA396,color:#ECE6D6
+    classDef app fill:#14202E,stroke:#C7A24C,color:#ECE6D6
+    classDef brain fill:#1A212D,stroke:#C7A24C,color:#ECE6D6
+    classDef trust fill:#17241C,stroke:#4FA396,color:#ECE6D6
+    classDef store fill:#241A17,stroke:#C65A3C,color:#ECE6D6
+    classDef llm fill:#2A2036,stroke:#9B7BB8,color:#ECE6D6
+    class LP,UI pres
+    class R app
+    class ORC,RPT,TRF,EML,RISK brain
+    class FC,GR,LED,ROIc trust
+    class DB,CP store
+    class LLM llm
 ```
-User Request
-     |
-     v
-Orchestrator (classifies the request)
-     |
-     |--> "report"   --> Budget Agent --> Schedule Agent --> Risk Agent --> Report Agent
-     |--> "email"    --> Email Agent
-     |--> "transfer" --> Budget Transfer Agent
-     |--> "status"   --> Data Retrieval (no LLM)
-```
 
-Without an orchestrator, you would need one massive agent that handles everything. That agent would be slow, unreliable, and impossible to maintain. The orchestrator pattern lets you build, test, and improve each agent independently.
+> On GitHub, click the diagram to open it full-screen with zoom and pan controls.
 
-Code location: `workflows/main_graph.py` - `orchestrator_node()` function
+---
 
-### Pattern 2: Evaluator-Optimizer
+## How a request flows
 
-The Evaluator-Optimizer pattern adds a quality control loop. After an agent produces output, a separate evaluator agent scores it against specific criteria. If the score is below the threshold, the output is sent back for regeneration with feedback.
+Every request is classified once by the orchestrator, then routed to a pipeline. Reports run through an evaluator and a grounding gate before they are shown. Actions with financial consequence stop for a human and only write to the ledger after approval and a solvency check.
 
-Every agent output is evaluated before being accepted:
+```mermaid
+flowchart TD
+    U([User request]) --> O{Orchestrator<br/>classify intent}
 
-- **Budget Analysis** is scored on data usage, root cause identification, specificity, completeness, professionalism (0-10)
-- **Schedule Analysis** is scored on the same five criteria (0-10)
-- **Risk Analysis** is scored on the same five criteria (0-10)
-- **Final Report** is scored on executive summary quality, data accuracy, structure, actionable recommendations, brevity (0-10)
-- **Email Drafts** are scored on subject line, tone, clarity, action items, purpose alignment (0-10)
+    O -->|unknown project| AB["Abstain<br/>'That project is not in the records'"]
 
-If a score is below the passing threshold (7/10 for analyses, 8/10 for reports and emails), the output is regenerated with the evaluator's specific feedback. This loop runs up to 3 times maximum to prevent infinite loops.
+    O -->|report| RG[Generate analysis<br/>budget · schedule · risk · writer]
+    RG --> EV{Evaluator<br/>quality score ≥ 8 ?}
+    EV -->|no, with feedback| RG
+    EV -->|yes| GV{Grounding gate<br/>every $ figure found in DB ?}
+    GV -->|ungrounded figure| RG
+    GV -->|all figures grounded| OUT1([Verified report + PDF export])
 
-```
-Agent generates output
-        |
-        v
-Evaluator scores output (0-10)
-        |
-        v
-Score >= threshold? --- YES --> Accept output
-        |
-        NO
-        |
-        v
-Send feedback to Agent
-        |
-        v
-Agent regenerates (attempt 2 of 3)
-        |
-        v
-Evaluator scores again...
-```
+    O -->|transfer| CK{Solvency check<br/>finance_core}
+    CK -->|would go insolvent| REJ["Blocked by rule<br/>+ audit entry"]
+    CK -->|safe| H1[[Interrupt — human approval]]
+    H1 -->|approved| WB[Ledger writeback<br/>two entries + audit + ROI]
+    H1 -->|rejected| N1["No change<br/>+ audit entry"]
+    WB --> OUT2([Both budgets updated on dashboard])
 
-LLMs are not deterministic. The same prompt can produce vastly different quality outputs. The evaluator loop ensures every output meets a minimum quality standard before reaching the user.
+    O -->|email| DR[Draft email] --> H2[[Interrupt — human approval]]
+    H2 -->|approved| SENT([Logged as sent + ROI])
+    H2 -->|rejected| N2[Discarded]
 
-Code locations:
-- `evaluators/analysis_evaluator.py` - Scores budget, schedule, and risk analyses
-- `evaluators/report_evaluator.py` - Scores executive reports
-- `evaluators/email_evaluator.py` - Scores email drafts
-- `workflows/main_graph.py` - `should_retry_report()` and `should_retry_email()` functions control the loop
-
-### Pattern 3: Human-in-the-Loop
-
-The Human-in-the-Loop pattern pauses the agent workflow at critical decision points and requires human approval before proceeding. Not every action needs oversight - only high-risk or irreversible ones.
-
-Two types of actions always require human approval:
-
-1. **Email sending** - Emails classified as MEDIUM or HIGH sensitivity are routed to the Approval Queue. The agent drafts the email and classifies its sensitivity level automatically, but a human must approve before it is sent.
-
-2. **Budget transfers** - All financial transfers require human authorization regardless of amount. The agent proposes the transfer, calculates the impact on both projects, and presents a recommendation, but the final decision is human.
-
-Actions that do NOT require approval:
-- Status reports (read-only, no side effects)
-- Budget analysis (read-only)
-- Schedule analysis (read-only)
-- Risk assessment (read-only)
-- Low-sensitivity emails (routine confirmations)
-
-```
-Agent completes work
-        |
-        v
-Is this a sensitive action?
-        |
-        |--> NO  --> Return result directly
-        |
-        |--> YES --> Add to Approval Queue
-                         |
-                         v
-                  Human reviews
-                         |
-                  Approve / Reject
-```
-
-Full automation is not always desirable. Some decisions carry real consequences. HITL gives the AI system the ability to do the work while keeping humans in control of the decisions that matter.
-
-Code locations:
-- `agents/email_agent.py` - `draft_email()` classifies sensitivity and sets `requires_approval`
-- `agents/budget_transfer_agent.py` - Always sets `requires_approval: True`
-- `api/routes.py` - Approval queue management and approve/reject endpoints
-
-### How the patterns work together
-
-The three patterns form a layered architecture:
-
-```
-Layer 1: ORCHESTRATOR
-   Receives request, routes to agents
-        |
-Layer 2: EVALUATOR-OPTIMIZER
-   Each agent's output is quality-checked
-        |
-Layer 3: HUMAN-IN-THE-LOOP
-   Sensitive actions pause for approval
-
-Full flow example: "Draft an email about budget overrun"
-
-1. Orchestrator identifies task type: "email"
-2. Email Agent drafts the email
-3. Email Evaluator scores it (9/10 - passes)
-4. Email Agent classifies sensitivity: MEDIUM
-5. System adds email to Approval Queue
-6. Human reviews and approves/rejects
+    classDef start fill:#14202E,stroke:#4FA396,color:#ECE6D6
+    classDef gate fill:#241A17,stroke:#C65A3C,color:#ECE6D6
+    classDef act fill:#17241C,stroke:#4FA396,color:#ECE6D6
+    classDef hitl fill:#2A2036,stroke:#9B7BB8,color:#ECE6D6
+    classDef done fill:#1A212D,stroke:#C7A24C,color:#ECE6D6
+    class U start
+    class O,EV,GV,CK gate
+    class RG,WB,DR act
+    class H1,H2 hitl
+    class OUT1,OUT2,SENT,AB,REJ,N1,N2 done
 ```
 
 ---
 
-## Agents
+## Anti-hallucination engineering
 
-| Agent | Responsibility | Uses Evaluator | Requires Approval |
-|-------|---------------|----------------|-------------------|
-| Budget Agent | Analyzes project budget data, identifies overruns and problem categories | Yes (7/10 threshold) | No |
-| Schedule Agent | Analyzes project timeline, identifies delays and root causes | Yes (7/10 threshold) | No |
-| Risk Agent | Combines budget and schedule data to identify and classify project risks | Yes (7/10 threshold) | No |
-| Report Agent | Generates executive reports from all analyses | Yes (8/10 threshold) | No |
-| Email Agent | Drafts professional emails with automatic sensitivity classification | Yes (8/10 threshold) | Yes (MEDIUM/HIGH sensitivity) |
-| Budget Transfer Agent | Proposes financial transfers between projects with impact analysis | No | Yes (always) |
+This is the core of the project. Keystone layers five independent defences so that a fabricated figure has to pass through all of them to reach the user, which in practice it cannot.
 
----
+```mermaid
+flowchart LR
+    REQ([Request]) --> M["LLM proposes<br/>language + intent"]
+    M --> C{"Deterministic core<br/>decides EVERY number"}
+    DB[(SQLite — single source of truth)] --> C
+    C --> V["Grounding verifier<br/>regex-extract every $ figure<br/>and match it to the DB"]
+    DB --> V
+    V -->|any figure not in DB| M
+    V -->|all figures grounded| OK([Trusted output])
 
-## Features
+    classDef a fill:#2A2036,stroke:#9B7BB8,color:#ECE6D6
+    classDef b fill:#17241C,stroke:#4FA396,color:#ECE6D6
+    classDef c fill:#241A17,stroke:#C65A3C,color:#ECE6D6
+    classDef d fill:#14202E,stroke:#4FA396,color:#ECE6D6
+    class M a
+    class C b
+    class V c
+    class REQ,OK,DB d
+```
 
-**Dashboard**
-- Real-time overview of all projects with color-coded status indicators (Critical / At Risk / On Track)
-- Click any project to see detailed budget breakdown, schedule status, delayed phases, and pending invoices
+**1. Knowledge grounding on structured data.** Agents never free-associate over raw text. Budget, schedule, risk and reconciliation inputs are pulled from the database as structured values, so the model narrates data it was handed rather than data it recalls. This follows the grounding principle behind retrieval-augmented generation (Lewis et al., 2020).
 
-**AI Chat Interface**
-- Natural language queries about project status, budgets, schedules, and risks
-- Multi-agent orchestration handles complex requests automatically
-- Quality scores displayed for every AI-generated output
+**2. Deterministic decoding.** Every generation call runs at `temperature = 0`. For factual reporting, sampling diversity is a liability, not a feature.
 
-**Approval Queue**
-- Email drafts and budget transfers require human approval before execution
-- Each approval item shows full context and agent reasoning
-- Approve or reject with one click
+**3. Strict abstention prompts.** Each agent is instructed to use only the figures, names and dates it was given, and to write *"not in records"* rather than guess. The orchestrator extends this to whole requests: asked for a project that does not exist, Keystone replies *"That project is not in the records. Available projects: ..."* instead of inventing one.
 
-**Activity Log**
-- Complete audit trail of all agent actions
-- Quality scores, attempt counts, and task types recorded
-- Full traceability for compliance and review
+**4. Chain-of-Verification gate.** After a report is generated, `evaluators/grounding.py` extracts every dollar figure in the text with a regex, scales suffixes (`$2.30M`, `$180k`), and checks each one against the set of figures the database actually supports within a tolerance. Any ungrounded figure fails the report, and the workflow regenerates it with the failure as feedback. This is a practical implementation of Chain-of-Verification (Dhuliawala et al., 2023).
 
----
+**5. Model proposes, code decides.** The hard architectural rule. No financial figure shown to the user is ever authored by the model. Budget totals, variances, reconciliation and solvency are all computed in `tools/finance_core.py`, which contains no LLM calls at all. The model's job is language and intent; the number's job belongs to Python.
 
-## Screenshots
-
-### Dashboard - Project Overview
-Color-coded project cards showing budget utilization, delays, and status at a glance.
-
-![Dashboard - Alpha Tower](screenshots/dashboard-alpha.png)
-
-![Dashboard - Beta Mall](screenshots/dashboard-beta.png)
-
-### AI Chat - Status Report
-The Orchestrator routes this request through 4 agents (Budget, Schedule, Risk, Report), each evaluated for quality.
-
-![Chat - Status Report](screenshots/chat-report.png)
-
-### AI Chat - Email Drafting
-The Email Agent drafts a professional email and classifies its sensitivity. Medium and High sensitivity emails are routed to the Approval Queue.
-
-![Chat - Email Draft](screenshots/chat-email.png)
-
-### Approval Queue - Human Review
-Sensitive actions pause here for human decision. The agent provides full context and reasoning.
-
-![Approvals - Email](screenshots/approvals-email.png)
-
-### AI Chat - Budget Transfer
-The Budget Transfer Agent calculates impact on both projects and always requires human approval.
-
-![Chat - Budget Transfer](screenshots/chat-transfer.png)
-
-### Approval Queue - Budget Transfer
-Financial decisions always require human authorization regardless of amount.
-
-![Approvals - Transfer](screenshots/approvals-transfer.png)
-
-### AI Chat - All Projects Overview
-A quick summary of all projects with status flags. This request uses data retrieval only with no LLM calls needed.
-
-![Chat - Overview](screenshots/chat-overview.png)
-
-### Activity Log
-Complete audit trail showing all agent actions, quality scores, and approval decisions.
-
-![Activity Log](screenshots/activity-log.png)
+Result: in verification runs, generated reports had **every** dollar figure traced back to the database (for example 21 of 21, 29 of 29, 34 of 34 figures grounded), and the test suite explicitly proves the verifier rejects an invented `$9,999,999` while correctly accepting legitimately scaled values like `$2.30M` and `$180k`.
 
 ---
 
-## Tech Stack
+## The deterministic finance core
 
-**Backend**
-- Python 3.11
-- Flask (REST API)
-- LangGraph (Agent orchestration and workflow management)
-- LangChain (LLM integration)
-- Groq API with Llama 3.3 70B (Language model)
+`tools/finance_core.py` is the single source of every number, in plain, testable Python. Budget state is **derived from the ledger**, never read from a static field, so an approved transfer or posted invoice changes the dashboard immediately and consistently:
 
-**Frontend**
-- React 18
-- Tailwind CSS (Styling)
-- Axios (API communication)
+```
+budget_total = sum(budgeted)  + transfers_in  - transfers_out
+spent        = sum(actual)    + posted invoices
+remaining    = budget_total - spent
+```
 
-**Data**
-- JSON-based project data (simulated realistic construction data)
-- In-memory approval queue and activity log
+Thresholds are explicit constants, so the rules are inspectable rather than hidden in prose:
+
+- **Invoice reconciliation** matches each invoice to its purchase order and flags any overbill beyond a `2%` tolerance. Example from the seed data: invoice `INV-1001` from SteelWorks bills `$120,000` against a `$100,000` PO, and Keystone flags the `$20,000` (20%) overbill as *"Hold for review"* on its own.
+- **Solvency check** blocks any transfer that would push the source project below zero remaining, with the reason recorded.
+- **Idempotency** keys every executed action to its approval thread, so a repeated approval can never double-post.
 
 ---
 
-## Project Structure
+## Human-in-the-loop
+
+Anything with financial or external consequence, a budget transfer or an outbound email, is never executed autonomously. Keystone uses LangGraph's `interrupt()` / `Command(resume=...)` mechanism with a persistent `SqliteSaver` checkpointer: the graph pauses mid-execution, surfaces the proposed action with an AI impact analysis in the Approvals tab, and resumes exactly where it stopped only after a human approves or rejects. The decision, the reason, and the resulting state are all written to the audit log.
+
+---
+
+## ROI instrumentation
+
+Every automated action logs a value event to `roi_events`, so the business case is measured rather than asserted. Baselines are configurable manual-effort estimates (for example a manual invoice reconciliation is modelled at 22 minutes, a status report at 90, an email at 15, a transfer at 35), and the console surfaces hours reclaimed, dollars flagged, and documents processed as live totals that increment with each action.
+
+---
+
+## Feature walkthrough
+
+The landing page and the console both ship with a full day/night mode, toggled from the header, that recolors the entire interface. The remaining screenshots are shown in the dark (noir) theme.
+
+| Night | Day |
+|---|---|
+| ![Keystone landing, dark theme](docs/screenshots/landing.png) | ![Keystone landing, light theme](docs/screenshots/landing-light.png) |
+
+### The portfolio at a glance
+
+The dashboard reads budget state live from the ledger. Alpha Tower is flagged **CRITICAL** because it is `$300,000` over its `$2,000,000` budget, computed from the data rather than stored as a status.
+
+![Keystone dashboard showing three projects, Alpha Tower flagged Critical at -$300,000 remaining](docs/screenshots/dashboard.png)
+
+### A grounded status report
+
+Asked for a status report, Keystone assembles budget, schedule, risk and a written executive summary, then passes it through the grounding gate. The footer records the verification: **"Grounding: all 21 figures trace to the record."** Every report can be exported to PDF with one click.
+
+![Full Alpha Tower status report with every figure grounded to the database](docs/screenshots/chat-report.png)
+
+### Abstention instead of hallucination
+
+Asked about a project that does not exist, Keystone refuses to invent one.
+
+![Keystone answering that Delta Plaza is not in the records and listing the real projects](docs/screenshots/abstention.png)
+
+### Human-in-the-loop — a budget transfer
+
+A transfer pauses for approval with a deterministic solvency check and an AI impact analysis. Here the `$950,000` move from Beta Mall eliminates Alpha Tower's `$300,000` deficit and leaves a `$650,000` surplus, all figures computed in code.
+
+![Approvals card for a $950,000 budget transfer from Beta Mall to Alpha Tower](docs/screenshots/transfer-approval.png)
+
+### Human-in-the-loop — an outbound email
+
+Drafting an external email also stops for review, tagged by sensitivity.
+
+![Approvals card showing a drafted email to a contractor awaiting approval](docs/screenshots/email-hitl.png)
+
+### Invoice automation — catching an overbill on its own
+
+Keystone reads the invoice, reconciles it against its purchase order and the project's remaining budget, and flags the discrepancy without being told to.
+
+![Invoice reconciliation catching a $20,000 overbill above the 2% tolerance](docs/screenshots/invoice-overbill.png)
+
+### A clean invoice, approved and posted
+
+A clean invoice reconciles with zero variance and posts to the ledger; the project's remaining budget drops by exactly the invoice amount.
+
+![A clean invoice reconciling with zero variance, then posted to the budget](docs/screenshots/invoice-approved.png)
+
+### The audit trail and measured value
+
+Every executed action is written to the ledger and the audit log, and the ROI bar tracks hours reclaimed and actions automated as they happen.
+
+![Ledger and activity audit trail showing recorded invoice and transfer decisions](docs/screenshots/audit-trail.png)
+
+![ROI bar showing hours reclaimed and automated actions](docs/screenshots/roi.png)
+
+---
+
+## Exported reports
+
+Every generated report can be exported to a clean, typeset PDF directly from the chat, built client-side with jsPDF so there is no print dialog and no server round-trip. Three sample exports are included so they can be opened without running the app:
+
+- [Alpha Tower report](docs/reports/alpha-tower-report.pdf) — a Critical project, 15% over budget
+- [Beta Mall report](docs/reports/beta-mall-report.pdf) — a healthy project, on track
+- [Gamma Residences report](docs/reports/gamma-residences-report.pdf) — an At Risk project
+
+Every dollar figure in these PDFs is grounded against the database by the verifier in `evaluators/grounding.py`.
+
+---
+
+## Technology stack
+
+| Layer | Technology |
+|---|---|
+| Orchestration | LangGraph (StateGraph, `interrupt`/`resume`, `SqliteSaver`) |
+| Agent framework | LangChain, `create_react_agent` |
+| Language model | Groq-hosted `gpt-oss-120b` / `gpt-oss-20b`, temperature 0 |
+| Backend | Python 3.11, Flask, Flask-CORS |
+| System of record | SQLite (WAL mode) |
+| Frontend | React 18, custom Art Deco design system (CSS variables, day/night) |
+| Report export | jsPDF + autoTable, marked, DOMPurify |
+| Testing | pytest (11 tests over the finance core, grounding and ledger) |
+
+---
+
+## Project structure
 
 ```
 construction-ai-command-center/
-|
-|-- data/
-|   |-- projects.json
-|   |-- budgets.json
-|   |-- schedules.json
-|   |-- contractors.json
-|
-|-- agents/
-|   |-- budget_agent.py
-|   |-- schedule_agent.py
-|   |-- risk_agent.py
-|   |-- report_agent.py
-|   |-- email_agent.py
-|   |-- budget_transfer_agent.py
-|
-|-- evaluators/
-|   |-- analysis_evaluator.py
-|   |-- report_evaluator.py
-|   |-- email_evaluator.py
-|
-|-- tools/
-|   |-- data_loader.py
-|   |-- calculator.py
-|
-|-- workflows/
-|   |-- main_graph.py
-|
-|-- api/
-|   |-- app.py
-|   |-- routes.py
-|
-|-- frontend/
-|   |-- src/
-|       |-- App.js
-|       |-- components/
-|           |-- Dashboard.jsx
-|           |-- ChatInterface.jsx
-|           |-- ApprovalQueue.jsx
-|           |-- ActivityLog.jsx
-|
-|-- run.py
-|-- test_quick.py
-|-- requirements.txt
+├── api/                 # Flask REST layer (routes.py, app.py)
+├── workflows/           # LangGraph orchestration (main_graph.py)
+├── agents/              # Budget, schedule, risk (ReAct), report agents
+├── evaluators/          # grounding.py — the figure verifier
+├── services/            # ledger.py — writeback, audit, idempotency
+├── tools/               # finance_core.py, roi.py, db.py, data_loader.py
+├── data/                # synthetic seed JSON (projects, budgets, invoices)
+├── tests/               # test_finance.py — 11 passing tests
+├── frontend/            # React console (Keystone design system)
+├── img/                 # logo and visual assets
+├── docs/                # screenshots and sample exported reports
+├── init_db.py           # builds / resets keystone.db from the seed JSON
+├── run.py               # starts the Flask API on :5000
+└── requirements.txt
 ```
 
 ---
 
-## Setup and Installation
+## Getting started
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- Groq API key (free at console.groq.com)
-
-### Backend Setup
+**Prerequisites:** Python 3.11+, Node.js 18+, and a Groq API key.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/construction-ai-command-center.git
-cd construction-ai-command-center
+# 1. Backend dependencies
 pip install -r requirements.txt
-```
 
-Create a `.env` file in the root directory:
+# 2. Configure the model key
+echo "GROQ_API_KEY=your_key_here" > .env
 
-```
-GROQ_API_KEY=your_groq_api_key_here
-```
+# 3. Build the system of record from the seed data
+python init_db.py
 
-Start the backend:
-
-```bash
+# 4. Start the API  (http://localhost:5000)
 python run.py
-```
 
-### Frontend Setup
-
-```bash
+# 5. In a second terminal, start the console (http://localhost:3000)
 cd frontend
 npm install
 npm start
 ```
 
-The application will be available at `http://localhost:3000`
+The landing page is served at `http://localhost:3000/keystone.html`, and the console entry is **Launch Console**. To reset all demo data to its clean baseline at any time, re-run `python init_db.py`.
 
 ---
 
-## API Endpoints
+## Testing
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | /api/chat | Send a natural language request to the agent system |
-| GET | /api/dashboard | Get overview of all projects |
-| GET | /api/project/id | Get detailed data for a specific project |
-| GET | /api/approvals | Get all pending approval items |
-| POST | /api/approvals/id | Approve or reject an item |
-| GET | /api/activity | Get the complete activity log |
-| GET | /api/invoices/id | Get pending invoices for a project |
+```bash
+pytest tests/ -v
+```
+
+The suite proves the parts that must never drift: the budget baseline (Alpha Tower at `-$300,000`, 15% over), the `$20,000` overbill flag, a clean reconciliation, a transfer writeback with before/after balances, idempotency of a repeated approval, an insolvent transfer being blocked, invoice approval increasing spend, the grounding verifier rejecting an invented figure while accepting scaled ones, and ROI accumulation.
 
 ---
 
-## Key Design Decisions
+## Research and references
 
-1. **Sequential agent execution for reports** - Budget, Schedule, and Risk agents run sequentially rather than in parallel. This is intentional because the Risk Agent needs budget and schedule data to make accurate risk assessments.
+The engineering choices above are grounded in published work. Figures quoted in the app are synthetic (see the honesty note below); the sources here are for the *methods* and the *industry problem*, not for the demo numbers.
 
-2. **Sensitivity-based email routing** - Not all emails need approval. Low-sensitivity emails like meeting confirmations and routine updates pass through automatically. Only MEDIUM and HIGH sensitivity emails require human review.
+**Anti-hallucination and agent design**
 
-3. **Maximum retry limit** - The evaluator-optimizer loop is capped at 3 attempts. Without this limit, a strict evaluator could create an infinite loop. Three attempts provides quality improvement while keeping response times reasonable.
+1. Dhuliawala, S. et al. (2023). *Chain-of-Verification Reduces Hallucination in Large Language Models.* arXiv:2309.11495. — the verify-then-regenerate gate.
+2. Ji, Z. et al. (2023). *Survey of Hallucination in Natural Language Generation.* ACM Computing Surveys. arXiv:2202.03629. — why grounding and abstention matter.
+3. Lewis, P. et al. (2020). *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks.* NeurIPS. arXiv:2005.11401. — grounding generation on retrieved structured data.
+4. Yao, S. et al. (2023). *ReAct: Synergizing Reasoning and Acting in Language Models.* ICLR. arXiv:2210.03629. — the risk agent's reason-and-act tool loop.
+5. Wei, J. et al. (2022). *Chain-of-Thought Prompting Elicits Reasoning in Large Language Models.* NeurIPS. arXiv:2201.11903.
+6. Anthropic (2024). *Building Effective Agents.* — orchestrator-workers and evaluator-optimizer patterns.
+7. LangGraph documentation. *Human-in-the-loop with interrupt and checkpointers.*
 
-4. **Separate evaluator agents** - Evaluators are separate from generators. This prevents the grading your own homework problem where an agent might rate its own output too generously.
+**Construction industry context**
 
-5. **All budget transfers require approval** - Financial actions are irreversible. Regardless of amount or analysis confidence, human authorization is mandatory.
+8. McKinsey Global Institute (2017). *Reinventing Construction: A Route to Higher Productivity.*
+9. McKinsey & Company (2020). *The Next Normal in Construction: How disruption is reshaping the world's largest ecosystem.*
+
+---
+
+## A note on honesty
+
+All project, budget, schedule and invoice figures in this repository are **synthetic seed data** (`data/*.json`), created to exercise the logic. They are not real company figures. The point of the project is not the data; it is the architecture that guarantees whatever data *is* loaded will be reported exactly, verifiably, and never invented, and that any action taken on it is checked, approved, recorded, and reversible. The ROI baselines are explicit, configurable assumptions rather than measured client figures.
+
+---
+
+## License
+
+Released under the MIT License. See [`LICENSE`](LICENSE).
+
+<div align="center">
+<br/>
+<sub>Keystone · Construction AI Command Center · v1.0.0</sub>
+</div>

@@ -1,46 +1,41 @@
 from langchain_groq import ChatGroq
+from workflows.schemas import AnalysisEvaluation
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+# Smaller/faster model for evaluation — cost-aware, and reduces same-model bias.
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0)
+structured_llm = llm.with_structured_output(AnalysisEvaluation)
+
 
 def evaluate_analysis(analysis_text: str, analysis_type: str) -> dict:
-    """Evaluate the quality of a budget, schedule, or risk analysis"""
+    prompt = f"""You are a strict quality reviewer for construction project analyses.
+Score this {analysis_type} analysis on each criterion from 0 (poor) to 2 (excellent).
 
-    prompt = f"""You are a quality reviewer for construction project analyses.
-Evaluate this {analysis_type} analysis strictly.
-
-ANALYSIS TO EVALUATE:
+ANALYSIS:
 {analysis_text}
 
-Score each criterion from 0-2:
-1. DATA USAGE - Does it reference specific numbers, dates, percentages? (0=none, 1=some, 2=thorough)
-2. ROOT CAUSE - Does it explain WHY problems exist, not just WHAT? (0=no, 1=partial, 2=yes)
-3. SPECIFICITY - Are recommendations specific and actionable? (0=generic, 1=somewhat, 2=very specific)
-4. COMPLETENESS - Does it cover all important aspects? (0=major gaps, 1=minor gaps, 2=complete)
-5. PROFESSIONALISM - Is the tone and structure professional? (0=poor, 1=ok, 2=excellent)
+Criteria:
+- data_usage: references specific numbers, dates, percentages
+- root_cause: explains WHY problems exist, not just WHAT
+- specificity: recommendations are specific and actionable
+- completeness: covers all important aspects
+- professionalism: tone and structure are professional
 
-Respond in this EXACT format:
-DATA_USAGE: [0-2]
-ROOT_CAUSE: [0-2]
-SPECIFICITY: [0-2]
-COMPLETENESS: [0-2]
-PROFESSIONALISM: [0-2]
-TOTAL: [sum out of 10]
-FEEDBACK: [2-3 sentences on what to improve]"""
-
-    response = llm.invoke(prompt)
-    content = response.content
+Then provide 2-3 sentences of feedback on what to improve."""
 
     try:
-        total = int(content.split("TOTAL:")[1].split("\n")[0].strip())
-        feedback = content.split("FEEDBACK:")[1].strip()
-    except (IndexError, ValueError):
-        total = 5
-        feedback = "Could not parse evaluation. Defaulting to average score."
-
-    return {
-        "score": total,
-        "max_score": 10,
-        "passed": total >= 7,
-        "feedback": feedback,
-        "raw_evaluation": content
-    }
+        result: AnalysisEvaluation = structured_llm.invoke(prompt)
+        return {
+            "score": result.total,
+            "max_score": 10,
+            "passed": result.total >= 7,
+            "feedback": result.feedback,
+        }
+    except Exception as e:
+        # Structured parsing failed — do NOT silently pass. Fail low so we retry.
+        return {
+            "score": 0,
+            "max_score": 10,
+            "passed": False,
+            "feedback": f"Evaluator failed to produce structured output ({e}). "
+                        f"Regenerate the analysis with stricter adherence to the requested format.",
+        }

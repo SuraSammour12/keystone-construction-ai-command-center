@@ -3,224 +3,119 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api";
 
-function Dashboard() {
+const money = (n) =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })
+    .format(n || 0);
+
+function RoiBar() {
+  const [roi, setRoi] = useState(null);
+  useEffect(() => {
+    const load = () => axios.get(`${API}/roi`).then((r) => setRoi(r.data)).catch(() => {});
+    load();
+    const t = setInterval(load, 8000);
+    return () => clearInterval(t);
+  }, []);
+  if (!roi) return null;
+  return (
+    <div className="ks-roi">
+      <div className="cell"><div className="v">{roi.hours_saved}</div><div className="l">Hours reclaimed</div></div>
+      <div className="cell"><div className="v">{money(roi.dollars_flagged)}</div><div className="l">Flagged before overrun</div></div>
+      <div className="cell"><div className="v">{roi.actions}</div><div className="l">Automated actions</div></div>
+    </div>
+  );
+}
+
+const flagPill = (flag) => {
+  const map = { RED: ["crit", "Critical"], YELLOW: ["warn", "At Risk"], GREEN: ["ok", "On Track"] };
+  const [cls, label] = map[flag] || ["", "Unknown"];
+  return <span className={`ks-pill ${cls}`}>{label}</span>;
+};
+
+export default function Dashboard() {
   const [projects, setProjects] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [projectDetail, setProjectDetail] = useState(null);
+  const [sel, setSel] = useState(null);
+  const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const loadDash = () =>
+    axios.get(`${API}/dashboard`).then((r) => { setProjects(r.data.projects); setLoading(false); })
+      .catch(() => setLoading(false));
 
-  const fetchDashboard = async () => {
-    try {
-      const res = await axios.get(`${API}/dashboard`);
-      setProjects(res.data.projects);
-      setLoading(false);
-    } catch (err) {
-      console.error("Dashboard error:", err);
-      setLoading(false);
-    }
+  useEffect(() => { loadDash(); }, []);
+
+  const openDetail = (id) => {
+    setSel(id);
+    axios.get(`${API}/project/${id}`).then((r) => setDetail(r.data)).catch(() => {});
   };
 
-  const fetchProjectDetail = async (projectId) => {
-    setSelectedProject(projectId);
-    try {
-      const res = await axios.get(`${API}/project/${projectId}`);
-      setProjectDetail(res.data);
-    } catch (err) {
-      console.error("Project detail error:", err);
-    }
-  };
-
-  const getFlagStyle = (flag) => {
-    switch (flag) {
-      case "RED":
-        return "border-red-300 bg-red-50";
-      case "YELLOW":
-        return "border-amber-300 bg-amber-50";
-      case "GREEN":
-        return "border-emerald-300 bg-emerald-50";
-      default:
-        return "border-gray-300 bg-gray-50";
-    }
-  };
-
-  const getFlagDot = (flag) => {
-    switch (flag) {
-      case "RED": return "bg-red-500";
-      case "YELLOW": return "bg-amber-500";
-      case "GREEN": return "bg-emerald-500";
-      default: return "bg-gray-400";
-    }
-  };
-
-  const getFlagLabel = (flag) => {
-    switch (flag) {
-      case "RED": return "Critical";
-      case "YELLOW": return "At Risk";
-      case "GREEN": return "On Track";
-      default: return "Unknown";
-    }
-  };
-
-  const formatMoney = (amount) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500 text-lg">Loading dashboard...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="ks-empty">Loading command center...</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {projects.map((proj) => (
-          <div
-            key={proj.id}
-            onClick={() => fetchProjectDetail(proj.id)}
-            className={`border-2 rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg ${getFlagStyle(proj.flag)} ${
-              selectedProject === proj.id ? "ring-2 ring-amber-500 shadow-md" : ""
-            }`}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-bold text-gray-900">{proj.name}</span>
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${getFlagDot(proj.flag)}`}></span>
-                <span className="text-xs font-medium text-gray-600">{getFlagLabel(proj.flag)}</span>
+    <div>
+      <RoiBar />
+      <div className="ks-grid-3">
+        {projects.map((p) => {
+          const pctUsed = Math.min((p.budget_spent / p.budget_total) * 100, 100);
+          const over = p.budget_spent > p.budget_total;
+          return (
+            <div key={p.id} className={`ks-card clickable ${sel === p.id ? "sel" : ""}`} onClick={() => openDetail(p.id)}>
+              <div className="ks-row" style={{ marginBottom: 16 }}>
+                <span className="ks-h2" style={{ fontSize: "1.2rem" }}>{p.name}</span>
+                {flagPill(p.flag)}
+              </div>
+              <div className="ks-row" style={{ marginBottom: 8 }}>
+                <span className="ks-muted" style={{ fontSize: ".85rem" }}>Budget</span>
+                <span style={{ fontSize: ".9rem" }}>{money(p.budget_spent)} / {money(p.budget_total)}</span>
+              </div>
+              <div className="ks-track"><div className={`ks-fill ${over ? "over" : ""}`} style={{ width: `${pctUsed}%` }} /></div>
+              <div className="ks-row" style={{ marginTop: 14 }}>
+                <span className="ks-muted" style={{ fontSize: ".85rem" }}>Delay</span>
+                <span style={{ color: p.delay_days > 0 ? "var(--crit)" : "var(--ok)", fontSize: ".9rem" }}>{p.delay_days} days</span>
               </div>
             </div>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Budget</span>
-                <span className="font-semibold text-gray-800">
-                  {formatMoney(proj.budget_spent)} / {formatMoney(proj.budget_total)}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className={`h-2 rounded-full transition-all ${
-                    proj.budget_spent > proj.budget_total ? "bg-red-500" : "bg-emerald-500"
-                  }`}
-                  style={{
-                    width: `${Math.min((proj.budget_spent / proj.budget_total) * 100, 100)}%`,
-                  }}
-                ></div>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Delay</span>
-                <span className={`font-semibold ${proj.delay_days > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                  {proj.delay_days} days
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Status</span>
-                <span className="font-medium text-gray-700">{proj.status}</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Project Detail Panel */}
-      {projectDetail && (
-        <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-6 shadow-sm">
-          <h2 className="text-xl font-bold text-gray-900">
-            {projectDetail.project.name} - Detail View
-          </h2>
+      {detail && (
+        <div className="ks-card" style={{ marginTop: 24 }}>
+          <div className="ks-eyebrow">Detail View</div>
+          <h2 className="ks-h2" style={{ margin: "8px 0 22px" }}>{detail.project.name}</h2>
 
-          {/* Budget Section */}
-          <div>
-            <h3 className="text-md font-semibold text-amber-700 mb-3">
-              Budget Breakdown
-            </h3>
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <p className="text-xs text-gray-500 mb-1">Total Budget</p>
-                <p className="text-lg font-bold text-gray-900">{formatMoney(projectDetail.budget.total)}</p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                <p className="text-xs text-gray-500 mb-1">Spent to Date</p>
-                <p className="text-lg font-bold text-gray-900">{formatMoney(projectDetail.budget.spent)}</p>
-              </div>
-              <div className={`border rounded-lg p-4 text-center ${projectDetail.budget.over_budget ? "bg-red-50 border-red-200" : "bg-emerald-50 border-emerald-200"}`}>
-                <p className="text-xs text-gray-500 mb-1">Remaining</p>
-                <p className={`text-lg font-bold ${projectDetail.budget.over_budget ? "text-red-600" : "text-emerald-600"}`}>
-                  {formatMoney(projectDetail.budget.remaining)}
-                </p>
-              </div>
-            </div>
+          <div className="ks-grid-3" style={{ marginBottom: 24 }}>
+            <div className="ks-card"><div className="ks-muted" style={{ fontSize: ".75rem" }}>Total Budget</div><div className="ks-num" style={{ fontSize: "1.6rem" }}>{money(detail.budget.total)}</div></div>
+            <div className="ks-card"><div className="ks-muted" style={{ fontSize: ".75rem" }}>Spent to Date</div><div className="ks-num" style={{ fontSize: "1.6rem" }}>{money(detail.budget.spent)}</div></div>
+            <div className="ks-card"><div className="ks-muted" style={{ fontSize: ".75rem" }}>Remaining</div><div className="ks-num" style={{ fontSize: "1.6rem", color: detail.budget.over_budget ? "var(--crit)" : "var(--teal)" }}>{money(detail.budget.remaining)}</div></div>
           </div>
 
-          {/* Schedule Section */}
-          <div>
-            <h3 className="text-md font-semibold text-amber-700 mb-3">
-              Schedule
-            </h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">Overall Delay</p>
-                <p className={`text-lg font-bold ${projectDetail.schedule.overall_delay_days > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                  {projectDetail.schedule.overall_delay_days} days
-                </p>
-              </div>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <p className="text-xs text-gray-500 mb-1">Projected End</p>
-                <p className="text-lg font-bold text-gray-900">{projectDetail.schedule.projected_end_date}</p>
-              </div>
-            </div>
-
-            {projectDetail.schedule.delayed_phases.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm text-gray-500 mb-2">Delayed Phases</p>
-                {projectDetail.schedule.delayed_phases.map((phase, i) => (
-                  <div
-                    key={i}
-                    className="bg-red-50 border border-red-200 rounded-lg p-3 mb-2 text-sm"
-                  >
-                    <span className="font-semibold text-red-700">{phase.phase}</span>
-                    <span className="text-gray-600">
-                      {" "} - {phase.delay_days} days - {phase.delay_reason}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Pending Invoices */}
-          {projectDetail.budget.pending_invoices.length > 0 && (
+          <div className="ks-grid-2">
             <div>
-              <h3 className="text-md font-semibold text-amber-700 mb-3">
-                Pending Invoices
-              </h3>
-              {projectDetail.budget.pending_invoices.map((inv, i) => (
-                <div
-                  key={i}
-                  className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2 text-sm flex justify-between items-center"
-                >
-                  <span className="text-gray-700">
-                    {inv.id} - {inv.contractor}
-                  </span>
-                  <span className="font-bold text-gray-900">{formatMoney(inv.amount)}</span>
+              <div className="ks-eyebrow" style={{ marginBottom: 10 }}>Schedule</div>
+              <div className="ks-row"><span className="ks-muted">Overall delay</span><span style={{ color: detail.schedule.overall_delay_days > 0 ? "var(--crit)" : "var(--ok)" }}>{detail.schedule.overall_delay_days} days</span></div>
+              <div className="ks-row" style={{ marginTop: 8 }}><span className="ks-muted">Projected end</span><span>{detail.schedule.projected_end_date || "N/A"}</span></div>
+              {detail.schedule.delayed_phases?.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  {detail.schedule.delayed_phases.map((ph, i) => (
+                    <div key={i} className="ks-card" style={{ padding: 12, marginBottom: 8 }}>
+                      <span style={{ color: "var(--crit)" }}>{ph.phase}</span>
+                      <span className="ks-muted" style={{ fontSize: ".85rem" }}> — {ph.delay_days}d — {ph.delay_reason}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
+            <div>
+              <div className="ks-eyebrow" style={{ marginBottom: 10 }}>Pending Invoices</div>
+              {detail.budget.pending_invoices?.length ? detail.budget.pending_invoices.map((inv, i) => (
+                <div key={i} className="ks-row ks-card" style={{ padding: 12, marginBottom: 8 }}>
+                  <span className="ks-muted" style={{ fontSize: ".9rem" }}>{inv.id} — {inv.contractor}</span>
+                  <span className="ks-num" style={{ fontSize: "1rem" }}>{money(inv.amount)}</span>
+                </div>
+              )) : <span className="ks-muted" style={{ fontSize: ".9rem" }}>None pending.</span>}
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
-
-export default Dashboard;

@@ -1,83 +1,85 @@
+"""
+Budget analysis agent.
+
+Anti-hallucination design (grounded generation + abstention + temp 0):
+the numbers come only from the live system of record, and the model is told,
+in strict terms, to use only those numbers and to say "not in records" for
+anything missing. It never originates a figure.
+"""
+from contextlib import closing
+
 from langchain_groq import ChatGroq
-from tools.data_loader import get_budget_by_project, get_pending_invoices
-from tools.calculator import calculate_budget_variance
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+from tools import db, finance_core as fc
+
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+
+STRICT = (
+    "STRICT DATA RULES (read carefully):\n"
+    "- Use ONLY the figures, names and dates provided in the DATA section below.\n"
+    "- Do NOT invent, estimate, extrapolate, or infer any number, percentage, name, "
+    "or date that is not explicitly present in the DATA.\n"
+    "- Every dollar amount and percentage you write MUST appear verbatim in the DATA.\n"
+    "- If something is not in the DATA, write 'not in records' rather than guessing.\n"
+    "- Do not propose specific invented dollar figures in recommendations; describe "
+    "actions qualitatively or reference only the real figures above.\n\n"
+)
 
 
-def run_budget_analysis(project_id: str, project_name: str) -> str:
-    """Analyze budget status for a given project using real data + LLM interpretation"""
+def _fmt_lines(lines):
+    out = []
+    for x in lines:
+        out.append(
+            f"- {x['category']}: Budgeted ${x['budgeted']:,.0f} | Actual ${x['actual']:,.0f} "
+            f"| {x['status']} ({x['variance_pct']}%) | Note: {x['note']}"
+        )
+    return "\n".join(out)
 
-    # Step 1: Load raw data
-    budget = get_budget_by_project(project_id)
-    if not budget:
-        return f"No budget data found for project {project_id}"
 
-    pending_invoices = get_pending_invoices(project_id)
+def _fmt_invoices(rows):
+    if not rows:
+        return "No pending invoices."
+    return "\n".join(
+        f"- {r['id']}: {r['contractor']} - ${r['amount']:,.0f} - Due: {r['due_date']}" for r in rows
+    )
 
-    # Step 2: Calculate variance for each category
-    breakdown_analysis = []
-    for item in budget["breakdown"]:
-        variance = calculate_budget_variance(item["budgeted"], item["actual"])
-        breakdown_analysis.append({
-            "category": item["category"],
-            "note": item["note"],
-            **variance
-        })
 
-    # Step 3: Build the overall picture
-    overall_variance = calculate_budget_variance(budget["total_budget"], budget["spent_to_date"])
+def run_budget_analysis(project_id: str, project_name: str, feedback: str = "") -> str:
+    with closing(db.get_conn()) as conn:
+        if not conn.execute("SELECT 1 FROM projects WHERE id=?", (project_id,)).fetchone():
+            return f"No budget data in records for {project_id}."
+        b = fc.project_budget(conn, project_id)
+        lines = fc.category_variances(conn, project_id)
+        pend = conn.execute(
+            "SELECT id, contractor, amount, due_date FROM invoices "
+            "WHERE project_id=? AND status='Pending Approval'", (project_id,)
+        ).fetchall()
 
-    # Step 4: Send everything to the LLM for professional analysis
-    prompt = f"""You are a senior construction budget analyst. 
-Analyze this budget data and write a professional analysis.
+    status = "over budget" if b["over_budget"] else "within budget"
+    feedback_section = ""
+    if feedback:
+        feedback_section = (
+            f"\n\nREVISION REQUIRED. A previous version was rejected. Fix these issues "
+            f"and remove any figure not in the DATA:\n{feedback}\n"
+        )
 
-PROJECT: {project_name} ({project_id})
+    prompt = f"""{STRICT}You are a senior construction budget analyst.
 
-OVERALL BUDGET:
-- Total Budget: ${budget['total_budget']:,}
-- Spent to Date: ${budget['spent_to_date']:,}
-- Remaining: ${budget['remaining']:,}
-- Status: {overall_variance['status']} by {abs(overall_variance['variance_pct'])}%
+DATA for {project_name} ({project_id}):
+OVERALL:
+- Total Budget: ${b['budget_total']:,.0f}
+- Spent to Date: ${b['spent']:,.0f}
+- Remaining: ${b['remaining']:,.0f}
+- Status: {status} ({b['over_budget_pct']}% over)
 
 CATEGORY BREAKDOWN:
-{_format_breakdown(breakdown_analysis)}
+{_fmt_lines(lines)}
 
-PENDING INVOICES ({len(pending_invoices)} awaiting approval):
-{_format_invoices(pending_invoices)}
+PENDING INVOICES ({len(pend)} awaiting approval):
+{_fmt_invoices(pend)}
 
-Write a 3-4 paragraph analysis covering:
-1. Overall budget health - is the project on track financially?
-2. Problem areas - which categories are over budget and why?
-3. Pending invoices - any concerns?
-4. Recommendations - specific actions to take
+Write a 3-4 paragraph budget analysis covering overall health, problem categories
+and why (using only the notes and numbers above), pending-invoice concerns, and
+recommendations. Use only the figures in the DATA.{feedback_section}"""
 
-Be specific with numbers. No generic advice."""
-
-    response = llm.invoke(prompt)
-    return response.content
-
-
-def _format_breakdown(breakdown: list) -> str:
-    """Format budget breakdown into readable text for the LLM"""
-    lines = []
-    for item in breakdown:
-        lines.append(
-            f"- {item['category']}: Budgeted ${item['budgeted']:,} | "
-            f"Actual ${item['actual']:,} | "
-            f"{item['status']} ({item['variance_pct']}%) | "
-            f"Note: {item['note']}"
-        )
-    return "\n".join(lines)
-
-
-def _format_invoices(invoices: list) -> str:
-    """Format pending invoices into readable text for the LLM"""
-    if not invoices:
-        return "No pending invoices."
-    lines = []
-    for inv in invoices:
-        lines.append(
-            f"- {inv['id']}: {inv['contractor']} - ${inv['amount']:,} - Due: {inv['due_date']}"
-        )
-    return "\n".join(lines)
+    return llm.invoke(prompt).content

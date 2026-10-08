@@ -1,0 +1,639 @@
+<title>Keystone</title>
+<link rel="icon" type="image/png" href="img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Poiret+One&family=Jost:wght@300;400;500&display=swap">
+<style>
+  /* Layout: single-scroll Art Deco landing, calm and spacious. Noir night mode and
+     cream day mode. Controlled palette: gold metal, cool teal, warm ember for light.
+     Day values live on bare :root; night in the two dark blocks. */
+  :root{
+    --bg:#F2ECDD; --bg-2:#ECE4D1; --surface:#FBF7EE;
+    --ink:#1C2430; --ink-soft:#5B5346; --line:#DED4BE;
+    --gold:#A9822F; --gold-bright:#C79A3E; --gold-deep:#8A6A28;
+    --teal:#2C6F66; --ember:#B04A2E;
+    --flute:rgba(169,130,47,.10); --glow:rgba(176,74,46,.10);
+    --h1:var(--ink); --h1-shadow:none;
+    --maxw:1120px;
+    --font-display:"Cinzel","Times New Roman",serif;
+    --font-deco:"Poiret One","Century Gothic",sans-serif;
+    --font-body:"Jost","Segoe UI",system-ui,sans-serif;
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0D1119; --bg-2:#101620; --surface:#141A24;
+      --ink:#ECE6D6; --ink-soft:#98A1AA; --line:#262E3A;
+      --gold:#C7A24C; --gold-bright:#E8CE8C; --gold-deep:#8A6B2E;
+      --teal:#4FA396; --ember:#C65A3C;
+      --flute:rgba(199,162,76,.08); --glow:rgba(198,90,60,.16);
+      --h1:var(--gold-bright); --h1-shadow:0 1px 44px rgba(232,206,140,.18);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1119; --bg-2:#101620; --surface:#141A24;
+    --ink:#ECE6D6; --ink-soft:#98A1AA; --line:#262E3A;
+    --gold:#C7A24C; --gold-bright:#E8CE8C; --gold-deep:#8A6B2E;
+    --teal:#4FA396; --ember:#C65A3C;
+    --flute:rgba(199,162,76,.08); --glow:rgba(198,90,60,.16);
+    --h1:var(--gold-bright); --h1-shadow:0 1px 44px rgba(232,206,140,.18);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-weight:300;
+    line-height:1.75;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  h1,h2,h3{font-family:var(--font-display);font-weight:600;line-height:1.16;margin:0;
+    text-wrap:balance;letter-spacing:.01em}
+  p{margin:0}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--maxw);margin-inline:auto;padding-inline:clamp(20px,5vw,48px)}
+
+  .eyebrow{font-family:var(--font-deco);font-size:.8rem;letter-spacing:.38em;text-transform:uppercase;
+    color:var(--teal);display:inline-flex;align-items:center;gap:13px}
+  .eyebrow::before{content:"";width:8px;height:8px;transform:rotate(45deg);
+    border:1px solid var(--teal);flex:none}
+  .eyebrow.center{justify-content:center}
+  .eyebrow.center::after{content:"";width:8px;height:8px;transform:rotate(45deg);border:1px solid var(--teal);flex:none}
+
+  /* cursor-tracked warm light */
+  .spotlight{position:fixed;inset:0;z-index:40;pointer-events:none;mix-blend-mode:screen;
+    opacity:0;transition:opacity .7s ease;
+    background:radial-gradient(460px circle at var(--mx,50%) var(--my,28%),var(--glow),transparent 72%)}
+  html.js .spotlight{opacity:1}
+
+  .scroll-prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+    background:linear-gradient(90deg,var(--teal),var(--gold-bright));transition:width .08s linear}
+
+  /* deco frame: hairline + two diagonal corner brackets, quiet by default */
+  .frame{position:relative;background:var(--surface);border:1px solid var(--line);
+    transition:border-color .45s ease,box-shadow .45s ease,transform .45s ease}
+  .frame::before,.frame::after{content:"";position:absolute;width:15px;height:15px;
+    border:1px solid var(--gold);opacity:.45;transition:opacity .45s,width .45s,height .45s}
+  .frame::before{top:9px;left:9px;border-right:0;border-bottom:0}
+  .frame::after{bottom:9px;right:9px;border-left:0;border-top:0}
+  .frame:hover{border-color:color-mix(in srgb,var(--gold) 50%,transparent);transform:translateY(-3px);
+    box-shadow:0 22px 54px -34px color-mix(in srgb,var(--gold) 70%,transparent)}
+  .frame:hover::before,.frame:hover::after{opacity:.95;width:21px;height:21px}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:10px;font-family:var(--font-deco);font-size:.84rem;
+    letter-spacing:.2em;text-transform:uppercase;cursor:pointer;padding:14px 28px;
+    border:1px solid var(--gold);color:var(--gold);background:transparent;position:relative;overflow:hidden;
+    transition:color .35s,box-shadow .35s}
+  .btn::after{content:"";position:absolute;inset:0;z-index:-1;background:var(--gold);
+    transform:translateY(101%);transition:transform .45s cubic-bezier(.6,0,.2,1)}
+  .btn:hover{color:var(--bg);box-shadow:0 0 26px -8px color-mix(in srgb,var(--gold) 80%,transparent)}
+  .btn:hover::after{transform:translateY(0)}
+  .btn.solid{color:var(--bg);background:var(--gold);border-color:var(--gold)}
+  .btn.solid::after{background:var(--gold-bright)}
+
+  /* ---------- NAV ---------- */
+  .nav{position:fixed;inset-block-start:env(safe-area-inset-top,0px);inset-inline:0;z-index:50;
+    background:color-mix(in srgb,var(--bg) 84%,transparent);backdrop-filter:blur(12px);
+    border-block-end:1px solid var(--line)}
+  .nav-in{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-block:15px}
+  .brand{display:flex;align-items:center;gap:13px}
+  .brand .mark{width:34px;height:34px;display:block;object-fit:contain;filter:brightness(.7) saturate(1.3)}
+  :root[data-theme="dark"] .brand .mark,:root:not([data-theme="light"]) .brand .mark{filter:none}
+  .brand .word{font-family:var(--font-deco);font-size:1.12rem;letter-spacing:.32em;color:var(--ink)}
+  .nav-right{display:flex;align-items:center;gap:26px}
+  .nav-links{display:flex;align-items:center;gap:28px}
+  .navlink{font-family:var(--font-deco);font-size:.8rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--ink-soft);transition:color .3s}
+  .navlink:hover{color:var(--gold)}
+  @media(max-width:860px){.navlink{display:none}}
+  .toggle{width:38px;height:38px;border:1px solid var(--line);background:transparent;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;color:var(--gold);border-radius:50%;
+    transition:border-color .3s,color .3s}
+  .toggle:hover{border-color:var(--gold);color:var(--gold-bright)}
+  .toggle svg{width:17px;height:17px}
+
+  .ks{fill:none;stroke:var(--gold);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round;
+    vector-effect:non-scaling-stroke}
+  html.js:not(.reduce) .hero-emblem .ks{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);
+    animation:draw 1.9s cubic-bezier(.65,0,.35,1) forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;padding-block:clamp(128px,19vh,188px) clamp(64px,10vh,104px);overflow:hidden}
+  .hero .glow{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(62% 54% at 50% -4%,var(--glow),transparent 70%)}
+  .hero .pillars{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.6;
+    background:repeating-linear-gradient(90deg,transparent 0 clamp(54px,8vw,92px),var(--flute) clamp(54px,8vw,92px) calc(clamp(54px,8vw,92px) + 1px));
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 26%,#000 72%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 26%,#000 72%,transparent)}
+  .hero .citybg{position:absolute;inset:0;z-index:0;pointer-events:none;display:none;opacity:.34;
+    background:url('img/city.jpg') center 90%/cover no-repeat;
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 52%,#000 86%,transparent);
+    mask-image:linear-gradient(180deg,transparent,#000 52%,#000 86%,transparent)}
+  .hero .ornament{position:absolute;top:66px;right:-8px;width:clamp(110px,15vw,200px);aspect-ratio:1;
+    z-index:0;pointer-events:none;display:none;opacity:.5;transform:scaleX(-1);
+    background:url('img/ornament.png') top left/contain no-repeat}
+  @media(max-width:880px){.hero .ornament{display:none!important}}
+  :root[data-theme="dark"] .hero .citybg,:root:not([data-theme="light"]) .hero .citybg,
+  :root[data-theme="dark"] .hero .ornament,:root:not([data-theme="light"]) .hero .ornament{display:block}
+  :root[data-theme="dark"] .hero .pillars,:root:not([data-theme="light"]) .hero .pillars{display:none}
+  .hero .hero-copy{position:relative;z-index:1;max-width:760px}
+  .hero .scrim{position:absolute;inset:0;z-index:0;pointer-events:none;display:none;
+    background:linear-gradient(90deg,var(--bg),color-mix(in srgb,var(--bg) 52%,transparent) 44%,transparent 80%)}
+  :root[data-theme="dark"] .hero .scrim,:root:not([data-theme="light"]) .hero .scrim{display:block}
+  h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;margin-block:28px 0;color:var(--h1);
+    text-shadow:var(--h1-shadow)}
+  .hero p.lede{margin-block-start:28px;font-size:clamp(1.06rem,2vw,1.22rem);color:var(--ink-soft);
+    max-width:38ch;font-weight:300}
+  @media(max-width:880px){.hero p.lede{margin-inline:auto}}
+  .cta-row{display:flex;flex-wrap:wrap;gap:16px;margin-block-start:40px}
+
+  .hero-emblem{position:relative;display:flex;align-items:center;justify-content:center;min-width:0;
+    max-width:350px;margin-inline:auto}
+  .hero-emblem .kmark-img{width:100%;height:auto;display:block;filter:brightness(.72) saturate(1.25)}
+  :root[data-theme="dark"] .hero-emblem .kmark-img,
+  :root:not([data-theme="light"]) .hero-emblem .kmark-img{filter:drop-shadow(0 0 34px rgba(232,206,140,.30))}
+
+  /* ---------- sections ---------- */
+  section{position:relative;z-index:1;padding-block:clamp(74px,11vh,124px)}
+  .sec-head{max-width:54ch;margin-block-end:clamp(40px,6vh,60px)}
+  .sec-head.center{margin-inline:auto;text-align:center}
+  .sec-head h2{font-size:clamp(1.9rem,4vw,2.9rem);margin-block-start:20px;color:var(--ink)}
+  .sec-head p{color:var(--ink-soft);font-size:1.08rem;margin-block-start:18px;max-width:52ch}
+  .sec-head.center p{margin-inline:auto}
+
+  .deco-rule{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:24px}
+  .deco-rule span{height:1px;width:min(120px,20vw);background:linear-gradient(90deg,transparent,var(--gold))}
+  .deco-rule span:last-child{background:linear-gradient(90deg,var(--gold),transparent)}
+  .deco-rule .dia{width:8px;height:8px;transform:rotate(45deg);border:1px solid var(--gold);flex:none}
+
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  @media(max-width:760px){.stats{grid-template-columns:1fr}}
+  .stat{padding:36px clamp(24px,3vw,36px)}
+  .stat .num{font-family:var(--font-display);font-weight:700;font-size:clamp(2.7rem,6vw,3.6rem);
+    line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .stat .cap{color:var(--ink-soft);margin-block-start:18px;font-size:1rem;max-width:30ch}
+  .stat .src{margin-block-start:16px;font-family:var(--font-deco);font-size:.72rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold-deep)}
+
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:760px){.compare{grid-template-columns:1fr}}
+  .cmp{padding:34px}
+  .cmp .tag{font-family:var(--font-deco);font-size:.74rem;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-soft)}
+  .cmp.op .tag{color:var(--teal)}
+  .cmp h3{font-size:1.3rem;margin-block:16px 10px;color:var(--ink)}
+  .cmp ul{list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:14px}
+  .cmp li{display:flex;gap:12px;color:var(--ink-soft);font-size:1rem}
+  .cmp li svg{flex:none;width:18px;height:18px;margin-top:4px}
+
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  @media(max-width:860px){.steps{grid-template-columns:1fr}}
+  .step{padding:34px}
+  .step .idx{font-family:var(--font-deco);font-size:.76rem;letter-spacing:.24em;color:var(--teal)}
+  .step .spot-wrap{display:flex;justify-content:center;margin-block:20px 22px}
+  .step .spot{width:128px;height:94px}
+  .step h3{font-size:1.35rem;margin-block-end:12px;color:var(--ink)}
+  .step p{color:var(--ink-soft);font-size:1rem}
+
+  .arch{padding:clamp(28px,4vw,48px)}
+  .flow{display:flex;align-items:stretch;gap:12px;flex-wrap:wrap}
+  .node{flex:1 1 150px;min-width:0;border:1px solid var(--line);padding:20px;background:var(--bg-2);
+    display:flex;flex-direction:column;gap:8px;transition:border-color .4s}
+  .node:hover{border-color:color-mix(in srgb,var(--gold) 45%,transparent)}
+  .node .k{font-family:var(--font-deco);font-size:.72rem;letter-spacing:.18em;color:var(--teal);text-transform:uppercase}
+  .node .t{font-size:1.02rem;color:var(--ink)}
+  .node .d{color:var(--ink-soft);font-size:.9rem}
+  .node.human{border-color:color-mix(in srgb,var(--gold) 42%,transparent)}
+  .arrow{align-self:center;color:var(--gold-deep);flex:none;font-size:1.2rem}
+  @media(max-width:760px){.arrow{transform:rotate(90deg)}}
+  .arch-note{margin-block-start:28px;font-size:1.02rem;color:var(--ink-soft);
+    border-left:1px solid var(--gold);padding-left:20px}
+  .arch-note b{color:var(--ink);font-weight:400}
+
+  .roi{position:relative;overflow:hidden}
+  .roi .glow{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(60% 60% at 50% 108%,var(--glow),transparent 70%)}
+  .roi .pattern{position:absolute;inset:0;z-index:0;pointer-events:none;display:none;opacity:.06;
+    background:url('img/pattern.jpg') center/340px repeat}
+  :root[data-theme="dark"] .roi .pattern,:root:not([data-theme="light"]) .roi .pattern{display:block}
+  .roi .wrap{position:relative;z-index:1}
+  .roi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:48px;margin-block-start:52px}
+  @media(max-width:760px){.roi-grid{grid-template-columns:1fr;gap:38px;text-align:center}}
+  .roi .num{font-family:var(--font-display);font-weight:700;font-size:clamp(2.7rem,6vw,3.7rem);
+    line-height:1;font-variant-numeric:tabular-nums;color:var(--gold)}
+  .roi .num .u{color:var(--gold-deep);font-size:.42em;font-family:var(--font-deco)}
+  .roi .cap{color:var(--ink-soft);margin-block-start:16px;font-size:1rem;max-width:28ch}
+  @media(max-width:760px){.roi .cap{margin-inline:auto}}
+  .roi .line{border:0;border-top:1px solid var(--line);margin-block:52px}
+  .deltas{display:flex;gap:52px;flex-wrap:wrap;justify-content:center}
+  .delta{display:flex;flex-direction:column;gap:6px;text-align:center}
+  .delta .row{display:flex;align-items:baseline;gap:14px;justify-content:center;
+    font-family:var(--font-display);font-weight:600;font-size:1.7rem}
+  .delta .was{color:var(--ink-soft);text-decoration:line-through;font-size:1.1rem;opacity:.65}
+  .delta .now{color:var(--teal)}
+  .delta .lbl{color:var(--ink-soft);font-size:.86rem;font-family:var(--font-deco);letter-spacing:.06em}
+
+  .final{text-align:center;position:relative;overflow:hidden}
+  .final .glow{position:absolute;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(54% 70% at 50% 50%,var(--glow),transparent 70%)}
+  .final .wrap{position:relative;z-index:1}
+  .final h2{font-size:clamp(2.1rem,5vw,3.3rem);color:var(--ink)}
+  .final p{color:var(--ink-soft);max-width:48ch;margin:20px auto 0;font-size:1.1rem}
+  .final .cta-row{justify-content:center;margin-block-start:36px}
+
+  footer{border-block-start:1px solid var(--line);padding-block:46px;color:var(--ink-soft)}
+  .foot-in{display:flex;justify-content:space-between;gap:22px;flex-wrap:wrap;align-items:center}
+  .foot-note{font-family:var(--font-deco);font-size:.78rem;letter-spacing:.12em;max-width:46ch;color:var(--gold-deep)}
+
+  .ref-list{list-style:none;counter-reset:ref;padding:0;margin:0;display:flex;flex-direction:column;gap:18px;max-width:64ch}
+  .ref-list li{counter-increment:ref;position:relative;padding-left:44px;color:var(--ink-soft);font-size:.98rem}
+  .ref-list li::before{content:counter(ref);position:absolute;left:0;top:1px;width:28px;height:28px;display:flex;
+    align-items:center;justify-content:center;font-family:var(--font-display);color:var(--gold);
+    border:1px solid var(--gold-deep);border-radius:50%;font-size:.82rem}
+  .ref-list a{color:var(--gold);text-decoration:underline;text-underline-offset:3px}
+  .ref-list .tag{display:block;font-family:var(--font-deco);letter-spacing:.12em;text-transform:uppercase;
+    font-size:.66rem;color:var(--gold-deep);margin-top:5px}
+
+  html.js:not(.reduce) .reveal{opacity:0;transform:translateY(22px);
+    transition:opacity .9s cubic-bezier(.5,0,.3,1),transform .9s cubic-bezier(.5,0,.3,1)}
+  html.js:not(.reduce) .reveal.in{opacity:1;transform:none}
+  html.js:not(.reduce) .reveal.d1{transition-delay:.09s}
+  html.js:not(.reduce) .reveal.d2{transition-delay:.18s}
+  html.js:not(.reduce) .reveal.d3{transition-delay:.27s}
+
+  :focus-visible{outline:2px solid var(--gold);outline-offset:4px}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="spotlight" aria-hidden="true"></div>
+<div class="scroll-prog" id="prog" aria-hidden="true"></div>
+
+<!-- =================== NAV =================== -->
+<nav class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Keystone home">
+      <img class="mark" src="img/logo.png" alt="" width="34" height="34">
+      <span class="word">KEYSTONE</span>
+    </a>
+    <div class="nav-right">
+      <div class="nav-links">
+        <a class="navlink" href="#gap">The Gap</a>
+        <a class="navlink" href="#how">How It Works</a>
+        <a class="navlink" href="#architecture">Architecture</a>
+      </div>
+      <button class="toggle" id="themeToggle" type="button" aria-label="Switch between day and night">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg>
+      </button>
+      <a class="btn" href="http://localhost:3000">Launch Console</a>
+    </div>
+  </div>
+</nav>
+
+<!-- =================== HERO =================== -->
+<header class="hero" id="top">
+  <div class="citybg" aria-hidden="true"></div>
+  <div class="scrim" aria-hidden="true"></div>
+  <div class="glow" aria-hidden="true"></div>
+  <div class="pillars" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="hero-copy">
+      <span class="eyebrow">Construction Intelligence</span>
+      <h1>Stop narrating your projects. Start automating them.</h1>
+      <p class="lede">Keystone reads the paperwork, computes every figure in code, and acts on your budget only after you approve, with a full audit trail behind it.</p>
+      <div class="cta-row">
+        <a class="btn solid" href="http://localhost:3000">Launch Console</a>
+        <a class="btn" href="#how">See How It Works</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- =================== THE GAP =================== -->
+<section id="gap">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">The Gap</span>
+      <h2>The industry runs on paperwork and guesswork.</h2>
+      <p>Construction is one of the least digitized sectors on earth. The cost of that shows up in the same three numbers, project after project.</p>
+    </div>
+    <div class="stats">
+      <div class="stat frame reveal d1">
+        <div class="num"><span class="count" data-to="98" data-suffix="%">98%</span></div>
+        <div class="cap">of megaprojects finish over budget or behind schedule.</div>
+        <div class="src">McKinsey, 500+ capital projects</div>
+      </div>
+      <div class="stat frame reveal d2">
+        <div class="num"><span class="count" data-to="1500" data-suffix="hrs">1,500 hrs</span></div>
+        <div class="cap">of admin spent answering RFIs on a single large project.</div>
+        <div class="src">2,000 RFIs at about 40 min each</div>
+      </div>
+      <div class="stat frame reveal d3">
+        <div class="num"><span class="count" data-to="0.4" data-suffix="%" data-dec="1">0.4%</span></div>
+        <div class="cap">annual productivity growth since 2000, versus about 2% for the wider economy.</div>
+        <div class="src">McKinsey Global Institute</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== THE SHIFT =================== -->
+<section id="shift">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">The Shift</span>
+      <h2>Most construction AI narrates. Keystone operates.</h2>
+      <p>A dashboard that describes a budget overrun is a report with extra steps. The value is in doing the work: reconciling the invoice, flagging the variance, drafting the exception, moving the money. Not describing it.</p>
+    </div>
+    <div class="compare">
+      <div class="cmp frame reveal d1">
+        <span class="tag">Narrator</span>
+        <h3>Chat that summarizes</h3>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Figures written by a language model, unverified.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>"Approve" returns a sentence; nothing changes.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>Quality scored on vibes by another model.</li>
+        </ul>
+      </div>
+      <div class="cmp op frame reveal d2">
+        <span class="tag">Operator</span>
+        <h3>Automation that acts</h3>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Every number computed in code, then narrated.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Approval writes a real ledger entry you can audit.</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Output verified against the source of record.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== HOW IT WORKS =================== -->
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head center reveal">
+      <span class="eyebrow center">How It Works</span>
+      <h2>Read. Verify. Act.</h2>
+      <p>One workflow, taken end to end. No swarm of chatbots, just a disciplined pipeline where the model does what models are good at and code does the rest.</p>
+      <div class="deco-rule"><span></span><i class="dia"></i><span></span></div>
+    </div>
+    <div class="steps">
+      <div class="step frame reveal d1">
+        <div class="idx">01 / READ</div>
+        <div class="spot-wrap">
+          <svg class="spot" viewBox="0 0 120 96" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M20 18 h24 l10 10 v38 a3 3 0 0 1 -3 3 H23 a3 3 0 0 1 -3 -3 V21 a3 3 0 0 1 3 -3 Z"/>
+            <path d="M44 18 v10 h10"/>
+            <path d="M27 42 h18 M27 51 h18 M27 60 h11" stroke="var(--gold-deep)"/>
+            <path d="M63 48 h15" stroke="var(--teal)"/>
+            <path d="M73 42 l6 6 l-6 6" stroke="var(--teal)"/>
+            <rect x="88" y="31" width="22" height="34" rx="1"/>
+            <path d="M88 43 h22 M88 54 h22" stroke="var(--gold-deep)"/>
+          </svg>
+        </div>
+        <h3>Ingest the Mess</h3>
+        <p>Upload an invoice or an RFI. Keystone extracts it into structured fields and matches it to the purchase order and budget line it belongs to.</p>
+      </div>
+      <div class="step frame reveal d2">
+        <div class="idx">02 / VERIFY</div>
+        <div class="spot-wrap">
+          <svg class="spot" viewBox="0 0 120 96" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M22 22 V72 M22 72 H102" stroke="var(--gold-deep)"/>
+            <path d="M26 62 L48 56 L70 60 L92 34"/>
+            <path d="M22 44 H102" stroke="var(--teal)" stroke-dasharray="4 5"/>
+            <circle cx="92" cy="34" r="4.5" fill="var(--teal)" stroke="none"/>
+          </svg>
+        </div>
+        <h3>Reconcile, Don't Guess</h3>
+        <p>Deterministic checks confirm the figures reconcile and the transfer keeps the source solvent. The model's prose is grounded against the data, so a number that isn't in the record is rejected.</p>
+      </div>
+      <div class="step frame reveal d3">
+        <div class="idx">03 / ACT</div>
+        <div class="spot-wrap">
+          <svg class="spot" viewBox="0 0 120 96" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+            <path d="M18 36 h26 M18 48 h26 M18 60 h16" stroke="var(--gold-deep)"/>
+            <circle cx="72" cy="48" r="15"/>
+            <path d="M65 48 l5 6 l11 -13" stroke="var(--teal)"/>
+            <path d="M93 48 h14"/>
+            <path d="M102 43 l6 5 l-6 5"/>
+          </svg>
+        </div>
+        <h3>Act Under Approval</h3>
+        <p>Sensitive moves like sending a message or moving budget pause for a human. Approve, and Keystone writes the change to the ledger and logs who decided what, and when.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== ARCHITECTURE =================== -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">Architecture</span>
+      <h2>The model proposes. Code decides.</h2>
+      <p>The three patterns behind Keystone, routing, evaluation, and human-in-the-loop, in the form that actually holds up in production.</p>
+    </div>
+    <div class="arch frame reveal">
+      <div class="flow">
+        <div class="node"><span class="k">Extract</span><span class="t">Language model</span><span class="d">Pulls entities and intent from raw documents.</span></div>
+        <div class="arrow" aria-hidden="true">&rsaquo;</div>
+        <div class="node"><span class="k">Decide</span><span class="t">Deterministic router</span><span class="d">Code picks the path and the figures, not the model.</span></div>
+        <div class="arrow" aria-hidden="true">&rsaquo;</div>
+        <div class="node"><span class="k">Verify</span><span class="t">Grounding check</span><span class="d">Every claim reconciles with the source of record.</span></div>
+        <div class="arrow" aria-hidden="true">&rsaquo;</div>
+        <div class="node human"><span class="k">Approve</span><span class="t">Human gate</span><span class="d">Irreversible actions wait for a person.</span></div>
+        <div class="arrow" aria-hidden="true">&rsaquo;</div>
+        <div class="node"><span class="k">Write</span><span class="t">Ledger</span><span class="d">The change is posted and audited.</span></div>
+      </div>
+      <p class="arch-note"><b>The rule that makes it trustworthy:</b> a language model never originates a financial figure. It extracts, it drafts, it explains. Arithmetic, constraints, and state changes live in code that can be read, tested, and audited.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =================== ROI =================== -->
+<section class="roi" id="roi">
+  <div class="glow" aria-hidden="true"></div>
+  <div class="wrap">
+    <div class="sec-head center reveal" style="margin-bottom:0">
+      <span class="eyebrow center">Return on Investment</span>
+      <h2>Built to show its worth, not just its output.</h2>
+    </div>
+    <div class="roi-grid">
+      <div class="reveal d1">
+        <div class="num"><span class="count" data-to="100" data-suffix="%">100%</span></div>
+        <div class="cap">of reported figures traced back to the record, with zero invented numbers.</div>
+      </div>
+      <div class="reveal d2">
+        <div class="num"><span class="count" data-to="60" data-suffix="%">60%</span></div>
+        <div class="cap">less time per document versus manual handling.</div>
+      </div>
+      <div class="reveal d3">
+        <div class="num"><span class="u">up to</span> <span class="count" data-to="15" data-suffix="%">15%</span></div>
+        <div class="cap">lower project cost when AI is applied to a real workflow.</div>
+      </div>
+    </div>
+    <hr class="line reveal">
+    <div class="deltas reveal">
+      <div class="delta">
+        <div class="row"><span class="was">26%</span><span class="now">14%</span></div>
+        <div class="lbl">cost overrun: adopters vs. the rest</div>
+      </div>
+      <div class="delta">
+        <div class="row"><span class="was">7.9%</span><span class="now">3.1%</span></div>
+        <div class="lbl">rework as a share of cost</div>
+      </div>
+      <div class="delta">
+        <div class="row"><span class="was">17</span><span class="now">11 mo</span></div>
+        <div class="lbl">average schedule delay</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== FINAL =================== -->
+<section class="final" id="contact">
+  <div class="glow" aria-hidden="true"></div>
+  <div class="wrap reveal">
+    <span class="eyebrow center">The Invitation</span>
+    <h2 style="margin-top:20px">See one workflow run end to end.</h2>
+    <p>A focused walkthrough: a messy invoice goes in, a verified decision comes out, and the ledger changes, with you in control at the gate.</p>
+    <div class="cta-row">
+      <a class="btn solid" href="http://localhost:3000">Launch Console</a>
+      <a class="btn" href="#architecture">Read the Architecture</a>
+    </div>
+  </div>
+</section>
+
+<section id="sources">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="eyebrow">References</span>
+      <h2>The numbers, and where they come from.</h2>
+      <p>Every industry figure on this page is cited below so visitors can verify it. The product metrics, grounding coverage and the live ROI meter, are measured by Keystone itself at runtime.</p>
+    </div>
+    <ol class="ref-list reveal">
+      <li>98% of megaprojects finish over budget or behind schedule; construction labor productivity has grown about 0.4% a year; systematic AI adoption can cut project cost by up to 15% and delivery time by up to 30%.
+        <a href="https://www.mckinsey.com/capabilities/operations/our-insights/reinventing-construction-through-a-productivity-revolution" target="_blank" rel="noopener">McKinsey Global Institute, Reinventing Construction</a>
+        <span class="tag">Primary research</span></li>
+      <li>A commercial project generates 30,000 to 50,000 documents, and RFI handling (the basis of the ~1,500-hour figure) runs 20 to 45 minutes each across 1,000 to 3,000 RFIs; document processing time falls 60 to 70% with automation.
+        <a href="https://www.raftlabs.com/blog/ai-for-construction" target="_blank" rel="noopener">RaftLabs, AI in Construction</a>
+        <span class="tag">Industry analysis, indicative</span></li>
+      <li>AI adopters vs. the rest: cost overrun 14% vs. 26%, rework 3.1% vs. 7.9% of cost, average delay 11 vs. 17 months.
+        <a href="https://www.fieldproxy.ai/resources/blog/commercial-construction-ai-agents-2026-report" target="_blank" rel="noopener">Fieldproxy, Commercial Construction AI Agents 2026 Report</a>
+        <span class="tag">Industry analysis, indicative</span></li>
+    </ol>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <a class="brand" href="#top" aria-label="Keystone">
+      <img class="mark" src="img/logo.png" alt="" width="34" height="34">
+      <span class="word">KEYSTONE</span>
+    </a>
+    <p class="foot-note">AI that operates on construction work, not one that only talks about it.</p>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var root=document.documentElement;
+    root.classList.add('js');
+    var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce)root.classList.add('reduce');
+
+    // theme toggle (day / night), persisted
+    var SUN='<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4l1.4-1.4M18 6l1.4-1.4"/>';
+    var MOON='<path d="M20 14.5A8 8 0 1 1 9.5 4 6.3 6.3 0 0 0 20 14.5Z"/>';
+    var icon=document.getElementById('themeIcon');
+    var saved=null;try{saved=localStorage.getItem('ks-theme');}catch(e){}
+    if(saved==='light'||saved==='dark')root.setAttribute('data-theme',saved);
+    function effective(){
+      var t=root.getAttribute('data-theme');
+      if(t)return t;
+      return (window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
+    }
+    function paintIcon(){icon.innerHTML=effective()==='dark'?SUN:MOON;}
+    paintIcon();
+    document.getElementById('themeToggle').addEventListener('click',function(){
+      var next=effective()==='dark'?'light':'dark';
+      root.setAttribute('data-theme',next);
+      try{localStorage.setItem('ks-theme',next);}catch(e){}
+      paintIcon();
+    });
+
+    if(!reduce){
+      document.querySelectorAll('.hero-emblem .ks').forEach(function(p){
+        try{var len=p.getTotalLength();p.style.setProperty('--len',len.toFixed(0));}catch(e){}
+      });
+    }
+
+    // cursor-tracked warm light
+    var spot=document.querySelector('.spotlight');
+    if(spot&&!reduce&&window.matchMedia('(hover:hover)').matches){
+      var sx=0,sy=0,sraf=false;
+      window.addEventListener('pointermove',function(e){
+        sx=e.clientX;sy=e.clientY;
+        if(!sraf){requestAnimationFrame(function(){
+          spot.style.setProperty('--mx',sx+'px');spot.style.setProperty('--my',sy+'px');sraf=false;
+        });sraf=true;}
+      },{passive:true});
+    }
+
+    // reveals
+    var reveals=document.querySelectorAll('.reveal');
+    if('IntersectionObserver'in window && !reduce){
+      var io=new IntersectionObserver(function(es){
+        es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});
+      },{threshold:.15,rootMargin:'0px 0px -8% 0px'});
+      reveals.forEach(function(el){io.observe(el);});
+    }else{reveals.forEach(function(el){el.classList.add('in');});}
+
+    // counters
+    function fmt(v,dec,suffix){
+      var n=dec?v.toFixed(dec):Math.round(v).toString();
+      n=n.replace(/\B(?=(\d{3})+(?!\d))/g,',');
+      if(suffix==='hrs')return n+' hrs';
+      if(suffix)return n+suffix;
+      return n;
+    }
+    function run(el){
+      var to=parseFloat(el.getAttribute('data-to'));
+      var dec=parseInt(el.getAttribute('data-dec')||'0',10);
+      var suffix=el.getAttribute('data-suffix')||'';
+      if(reduce){el.textContent=fmt(to,dec,suffix);return;}
+      var dur=1500,start=null;
+      function tick(ts){
+        if(!start)start=ts;
+        var p=Math.min((ts-start)/dur,1),eased=1-Math.pow(1-p,3);
+        el.textContent=fmt(to*eased,dec,suffix);
+        if(p<1)requestAnimationFrame(tick);else el.textContent=fmt(to,dec,suffix);
+      }
+      requestAnimationFrame(tick);
+    }
+    var counters=document.querySelectorAll('.count');
+    if('IntersectionObserver'in window && !reduce){
+      var io2=new IntersectionObserver(function(es){
+        es.forEach(function(e){if(e.isIntersecting){run(e.target);io2.unobserve(e.target);}});
+      },{threshold:.6});
+      counters.forEach(function(el){el.textContent='0';io2.observe(el);});
+    }
+
+    // scroll progress
+    var prog=document.getElementById('prog');
+    var ticking=false;
+    function onScroll(){
+      var y=window.scrollY||window.pageYOffset||0;
+      var h=document.documentElement.scrollHeight-window.innerHeight;
+      if(prog)prog.style.width=(h>0?(y/h*100):0)+'%';
+      ticking=false;
+    }
+    window.addEventListener('scroll',function(){if(!ticking){requestAnimationFrame(onScroll);ticking=true;}},{passive:true});
+    onScroll();
+
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click',function(e){
+        var id=a.getAttribute('href');if(id==='#'||id.length<2)return;
+        var t=document.querySelector(id);if(!t)return;
+        e.preventDefault();t.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+      });
+    });
+  })();
+</script>

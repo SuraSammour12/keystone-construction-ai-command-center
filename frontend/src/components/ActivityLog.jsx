@@ -3,121 +3,65 @@ import axios from "axios";
 
 const API = "http://localhost:5000/api";
 
-function ActivityLog() {
+export default function ActivityLog() {
   const [log, setLog] = useState([]);
+  const [audit, setAudit] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchLog();
-  }, []);
-
-  const fetchLog = async () => {
-    try {
-      const res = await axios.get(`${API}/activity`);
-      setLog(res.data.log);
-      setLoading(false);
-    } catch (err) {
-      console.error("Activity log error:", err);
-      setLoading(false);
-    }
+  const load = () => {
+    Promise.all([
+      axios.get(`${API}/activity`).then((r) => setLog(r.data.log)).catch(() => {}),
+      axios.get(`${API}/audit`).then((r) => setAudit(r.data.audit || [])).catch(() => {}),
+    ]).finally(() => setLoading(false));
   };
+  useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, []);
 
-  const getTaskLabel = (type) => {
-    switch (type) {
-      case "report": return "Report";
-      case "email": return "Email";
-      case "transfer": return "Transfer";
-      case "status": return "Overview";
-      case "approval": return "Approval";
-      default: return "Task";
-    }
-  };
+  const scorePill = (k, v) => (
+    <span key={k} className={`ks-pill ${v >= 8 ? "ok" : v >= 5 ? "warn" : "crit"}`}>{k}: {v}/10</span>
+  );
 
-  const getTaskStyle = (type) => {
-    switch (type) {
-      case "report": return "bg-blue-100 text-blue-700";
-      case "email": return "bg-purple-100 text-purple-700";
-      case "transfer": return "bg-amber-100 text-amber-700";
-      case "approval": return "bg-emerald-100 text-emerald-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading activity log...</div>
-      </div>
-    );
-  }
-
-  if (log.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-12 text-center shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Activity Yet</h3>
-        <p className="text-gray-500 text-sm">
-          Agent activities will be logged here as you use the chat.
-        </p>
-      </div>
-    );
-  }
+  if (loading) return <div className="ks-empty">Loading activity...</div>;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-gray-900">
-          Activity Log ({log.length} entries)
-        </h2>
-        <button
-          onClick={fetchLog}
-          className="text-sm text-amber-600 hover:text-amber-700 font-medium"
-        >
-          Refresh
-        </button>
-      </div>
+    <div>
+      <div className="ks-eyebrow">Audit Trail</div>
+      <h2 className="ks-h2" style={{ margin: "8px 0 20px" }}>Ledger &amp; Activity</h2>
 
-      <div className="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 shadow-sm">
-        {log.map((entry, i) => (
-          <div key={i} className="p-4 flex items-start gap-4">
-            <span className={`text-xs font-medium px-2 py-1 rounded-full mt-1 ${getTaskStyle(entry.task_type)}`}>
-              {getTaskLabel(entry.task_type)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-gray-900 font-medium truncate">
-                {entry.request}
-              </p>
-              <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
-                <span>Project: {entry.project || "N/A"}</span>
-                {entry.attempts > 0 && (
-                  <span>Attempts: {entry.attempts}</span>
+      <div className="ks-grid-2">
+        <div>
+          <div className="ks-eyebrow" style={{ marginBottom: 12 }}>Ledger writes ({audit.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {audit.length ? audit.map((a, i) => (
+              <div key={i} className="ks-card" style={{ padding: 14 }}>
+                <div className="ks-row">
+                  <span style={{ color: "var(--gold)", fontSize: ".9rem" }}>{a.action}</span>
+                  <span className="ks-muted" style={{ fontSize: ".75rem" }}>{a.ts}</span>
+                </div>
+                <div className="ks-muted" style={{ fontSize: ".82rem", marginTop: 6, wordBreak: "break-word" }}>{a.detail}</div>
+              </div>
+            )) : <span className="ks-muted" style={{ fontSize: ".9rem" }}>No ledger writes yet.</span>}
+          </div>
+        </div>
+
+        <div>
+          <div className="ks-eyebrow" style={{ marginBottom: 12 }}>Agent activity ({log.length})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {log.length ? log.map((e, i) => (
+              <div key={i} className="ks-card" style={{ padding: 14 }}>
+                <div style={{ fontSize: ".92rem" }}>{e.request}</div>
+                <div className="ks-muted" style={{ fontSize: ".78rem", marginTop: 4 }}>
+                  {e.task_type || "task"} · {e.project || "N/A"} · {e.status}
+                </div>
+                {e.scores && Object.values(e.scores).some((v) => v > 0) && (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                    {Object.entries(e.scores).filter(([, v]) => v > 0).map(([k, v]) => scorePill(k, v))}
+                  </div>
                 )}
               </div>
-              {entry.scores && Object.values(entry.scores).some((v) => v > 0) && (
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {Object.entries(entry.scores)
-                    .filter(([_, v]) => v > 0)
-                    .map(([key, val]) => (
-                      <span
-                        key={key}
-                        className={`text-xs px-2 py-1 rounded-full font-medium ${
-                          val >= 8
-                            ? "bg-emerald-100 text-emerald-700"
-                            : val >= 5
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
-                      >
-                        {key}: {val}/10
-                      </span>
-                    ))}
-                </div>
-              )}
-            </div>
+            )) : <span className="ks-muted" style={{ fontSize: ".9rem" }}>No activity yet.</span>}
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
 }
-
-export default ActivityLog;

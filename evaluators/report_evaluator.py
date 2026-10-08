@@ -1,47 +1,39 @@
 from langchain_groq import ChatGroq
+from workflows.schemas import ReportEvaluation
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0)
+structured_llm = llm.with_structured_output(ReportEvaluation)
 
 
 def evaluate_report(report_text: str) -> dict:
-    """Evaluate the quality of an executive project report"""
+    prompt = f"""You are a senior executive reviewing a construction project report
+that will be shown to C-level leadership. Score strictly, 0 (poor) to 2 (excellent).
 
-    prompt = f"""You are a senior executive reviewing a construction project report.
-Evaluate it strictly - this report goes to C-level leadership.
-
-REPORT TO EVALUATE:
+REPORT:
 {report_text}
 
-Score each criterion from 0-2:
-1. EXECUTIVE SUMMARY - Clear, concise, highlights the most critical issues? (0-2)
-2. DATA ACCURACY - References specific numbers, dates, percentages throughout? (0-2)
-3. STRUCTURE - Has clear sections (Budget, Schedule, Risk, Recommendations)? (0-2)
-4. RECOMMENDATIONS - Specific, actionable, with owners and deadlines? (0-2)
-5. BREVITY - Under 800 words, no fluff, every sentence adds value? (0-2)
+Criteria:
+- executive_summary: clear, concise, highlights the most critical issues
+- data_accuracy: references specific numbers, dates, percentages throughout
+- structure: has clear sections (Budget, Schedule, Risk, Recommendations)
+- recommendations: specific, actionable, with owners and deadlines
+- brevity: under 800 words, no fluff
 
-Respond in this EXACT format:
-EXECUTIVE_SUMMARY: [0-2]
-DATA_ACCURACY: [0-2]
-STRUCTURE: [0-2]
-RECOMMENDATIONS: [0-2]
-BREVITY: [0-2]
-TOTAL: [sum out of 10]
-FEEDBACK: [2-3 sentences on what must be fixed before sending to executives]"""
-
-    response = llm.invoke(prompt)
-    content = response.content
+Then provide 2-3 sentences of feedback on what must be fixed."""
 
     try:
-        total = int(content.split("TOTAL:")[1].split("\n")[0].strip())
-        feedback = content.split("FEEDBACK:")[1].strip()
-    except (IndexError, ValueError):
-        total = 5
-        feedback = "Could not parse evaluation. Defaulting to average score."
-
-    return {
-        "score": total,
-        "max_score": 10,
-        "passed": total >= 8,
-        "feedback": feedback,
-        "raw_evaluation": content
-    }
+        result: ReportEvaluation = structured_llm.invoke(prompt)
+        return {
+            "score": result.total,
+            "max_score": 10,
+            "passed": result.total >= 8,
+            "feedback": result.feedback,
+        }
+    except Exception as e:
+        return {
+            "score": 0,
+            "max_score": 10,
+            "passed": False,
+            "feedback": f"Evaluator failed to produce structured output ({e}). "
+                        f"Rewrite the report ensuring each section is clearly labelled.",
+        }

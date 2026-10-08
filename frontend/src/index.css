@@ -1,1 +1,158 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Poiret+One&family=Jost:wght@300;400;500&display=swap');
+
+/* ===========================================================
+   Keystone console design system. Dark (noir) by default,
+   with a light (day) override. Shared by every tab so the
+   components stay lean.
+   =========================================================== */
+:root{
+  --bg:#0D1119; --bg-2:#101620; --surface:#141A24; --surface-2:#1A212D;
+  --ink:#ECE6D6; --ink-soft:#98A1AA; --line:#262E3A;
+  --gold:#C7A24C; --gold-bright:#E8CE8C; --gold-deep:#8A6B2E;
+  --teal:#4FA396; --ember:#C65A3C;
+  --ok:#4FA396; --warn:#D9A648; --crit:#D4624B;
+  --font-display:"Cinzel","Times New Roman",serif;
+  --font-deco:"Poiret One","Century Gothic",sans-serif;
+  --font-body:"Jost","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+:root[data-theme="light"]{
+  --bg:#E7DEC8; --bg-2:#DFD4BA; --surface:#FBF8F0; --surface-2:#F1E9D8;
+  --ink:#131C29; --ink-soft:#463F31; --line:#C9BB97;
+  --gold:#876726; --gold-bright:#A9822F; --gold-deep:#6B501C;
+  --teal:#235A52; --ember:#9E3F26;
+  --ok:#235A52; --warn:#916717; --crit:#A33826;
+  color-scheme:light;
+}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-weight:300}
+.ks-app{min-height:100vh;background:var(--bg)}
+
+/* header */
+.ks-header{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 86%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.ks-header-in{max-width:1180px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.ks-brand{display:flex;align-items:center;gap:12px;position:relative;text-decoration:none;color:inherit}
+a.ks-brand{cursor:pointer;transition:opacity .25s}
+a.ks-brand:hover{opacity:.82}
+a.ks-brand::after{content:attr(data-tip);position:absolute;top:calc(100% + 9px);left:46px;white-space:nowrap;
+  font-family:var(--font-deco);letter-spacing:.12em;text-transform:uppercase;font-size:.64rem;color:var(--ink-soft);
+  background:var(--surface);border:1px solid var(--line);padding:5px 10px;opacity:0;transform:translateY(-4px);
+  transition:opacity .25s,transform .25s;pointer-events:none}
+a.ks-brand:hover::after{opacity:1;transform:translateY(0)}
+.ks-brand img{width:34px;height:34px;object-fit:contain}
+.ks-brand .word{font-family:var(--font-deco);letter-spacing:.3em;font-size:1.1rem}
+.ks-brand .sub{font-family:var(--font-deco);letter-spacing:.14em;font-size:.68rem;color:var(--ink-soft)}
+.ks-status{display:flex;align-items:center;gap:8px;font-family:var(--font-deco);letter-spacing:.12em;
+  font-size:.72rem;text-transform:uppercase;color:var(--ink-soft)}
+.ks-dot{width:8px;height:8px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}
+.ks-toggle{width:36px;height:36px;border:1px solid var(--line);background:transparent;color:var(--gold);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ks-toggle:hover{border-color:var(--gold)}
+.ks-toggle svg{width:16px;height:16px}
+
+/* tabs */
+.ks-tabs{max-width:1180px;margin:0 auto;padding:0 24px;display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.ks-tab{padding:14px 18px;font-family:var(--font-deco);letter-spacing:.16em;text-transform:uppercase;
+  font-size:.78rem;color:var(--ink-soft);background:none;border:0;border-bottom:2px solid transparent;cursor:pointer}
+.ks-tab:hover{color:var(--ink)}
+.ks-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+.ks-main{max-width:1180px;margin:0 auto;padding:28px 24px 60px}
+
+/* headings / text */
+.ks-h2{font-family:var(--font-display);font-weight:600;font-size:1.5rem;margin:0}
+.ks-eyebrow{font-family:var(--font-deco);letter-spacing:.3em;text-transform:uppercase;font-size:.72rem;color:var(--teal)}
+.ks-muted{color:var(--ink-soft)}
+.ks-num{font-family:var(--font-display);font-weight:700;font-variant-numeric:tabular-nums;color:var(--gold)}
+
+/* frame card with deco corner brackets */
+.ks-card{position:relative;background:var(--surface);border:1px solid var(--line);padding:22px;
+  transition:border-color .35s,box-shadow .35s,transform .35s}
+.ks-card::before,.ks-card::after{content:"";position:absolute;width:13px;height:13px;border:1px solid var(--gold);opacity:.4}
+.ks-card::before{top:7px;left:7px;border-right:0;border-bottom:0}
+.ks-card::after{bottom:7px;right:7px;border-left:0;border-top:0}
+.ks-card.clickable{cursor:pointer}
+.ks-card.clickable:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--gold) 50%,transparent);
+  box-shadow:0 20px 48px -30px color-mix(in srgb,var(--gold) 70%,transparent)}
+.ks-card.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+
+/* buttons */
+.ks-btn{font-family:var(--font-deco);letter-spacing:.18em;text-transform:uppercase;font-size:.78rem;
+  padding:11px 20px;border:1px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;
+  transition:background .3s,color .3s}
+.ks-btn:hover{background:var(--gold);color:var(--bg)}
+.ks-btn.solid{background:var(--gold);color:var(--bg)}
+.ks-btn.solid:hover{background:var(--gold-bright)}
+.ks-btn.ghost{border-color:var(--line);color:var(--ink)}
+.ks-btn.ghost:hover{border-color:var(--gold);background:transparent;color:var(--gold)}
+.ks-btn.danger{border-color:var(--crit);color:var(--crit)}
+.ks-btn.danger:hover{background:var(--crit);color:var(--bg)}
+.ks-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* pills */
+.ks-pill{font-family:var(--font-deco);letter-spacing:.1em;text-transform:uppercase;font-size:.66rem;
+  padding:4px 10px;border:1px solid var(--line);border-radius:999px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:6px}
+.ks-pill.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,transparent)}
+.ks-pill.warn{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 50%,transparent)}
+.ks-pill.crit{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 50%,transparent)}
+
+/* progress bar */
+.ks-track{width:100%;height:6px;background:var(--bg-2);border:1px solid var(--line);overflow:hidden}
+.ks-fill{height:100%;background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
+.ks-fill.over{background:linear-gradient(90deg,#7a2e24,var(--crit))}
+
+/* grid helpers */
+.ks-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.ks-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.ks-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+@media(max-width:820px){.ks-grid-3{grid-template-columns:1fr}.ks-grid-2{grid-template-columns:1fr}}
+
+/* ROI bar */
+.ks-roi{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:24px}
+.ks-roi .cell{background:var(--surface);padding:18px 22px}
+.ks-roi .cell .v{font-family:var(--font-display);font-weight:700;font-size:1.8rem;color:var(--gold);font-variant-numeric:tabular-nums}
+.ks-roi .cell .l{font-family:var(--font-deco);letter-spacing:.12em;text-transform:uppercase;font-size:.66rem;color:var(--ink-soft);margin-top:4px}
+@media(max-width:820px){.ks-roi{grid-template-columns:1fr}}
+
+/* chat */
+.ks-chat{display:flex;flex-direction:column;height:calc(100vh - 230px);min-height:420px}
+.ks-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:14px;padding:4px}
+.ks-msg{max-width:80%;padding:14px 16px;border:1px solid var(--line);white-space:pre-wrap;font-size:.94rem;line-height:1.6}
+.ks-msg.user{align-self:flex-end;background:var(--surface-2);border-color:color-mix(in srgb,var(--gold) 35%,transparent)}
+.ks-msg.agent,.ks-msg.system{align-self:flex-start;background:var(--surface)}
+.ks-input-row{display:flex;gap:10px;margin-top:14px}
+.ks-input{flex:1;background:var(--surface);border:1px solid var(--line);color:var(--ink);padding:13px 15px;font-family:var(--font-body);font-size:.95rem}
+.ks-input:focus{outline:none;border-color:var(--gold)}
+
+/* rendered markdown in agent messages */
+.ks-msg.ks-md{max-width:94%;white-space:normal}
+.ks-md h1{font-family:var(--font-display);font-size:1.4rem;margin:.1em 0 .5em}
+.ks-md h2{font-family:var(--font-display);font-size:1.18rem;margin:.9em 0 .4em;color:var(--ink)}
+.ks-md h3{font-family:var(--font-deco);letter-spacing:.1em;font-size:.82rem;color:var(--gold);margin:1.1em 0 .4em;text-transform:uppercase}
+.ks-md p{margin:.5em 0}
+.ks-md strong{color:var(--ink);font-weight:500}
+.ks-md em{color:var(--ink-soft)}
+.ks-md hr{border:0;border-top:1px solid var(--line);margin:1em 0}
+.ks-md ul,.ks-md ol{margin:.5em 0;padding-left:1.4em}
+.ks-md li{margin:.3em 0}
+.ks-md a{color:var(--gold)}
+.ks-md code{font-family:ui-monospace,monospace;background:var(--bg-2);padding:1px 5px;border:1px solid var(--line);font-size:.85em}
+.ks-md table{border-collapse:collapse;width:100%;margin:.7em 0;font-size:.85rem;display:block;overflow-x:auto}
+.ks-md th,.ks-md td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+.ks-md th{color:var(--gold);font-family:var(--font-deco);letter-spacing:.06em;font-weight:400;background:var(--bg-2)}
+.ks-md tr:nth-child(even) td{background:color-mix(in srgb,var(--surface-2) 55%,transparent)}
+.ks-pdf-btn{font-family:var(--font-deco);letter-spacing:.16em;text-transform:uppercase;font-size:.68rem;
+  padding:7px 14px;border:1px solid var(--gold);color:var(--gold);background:transparent;cursor:pointer;transition:background .3s,color .3s}
+.ks-pdf-btn:hover{background:var(--gold);color:var(--bg)}
+
+/* misc */
+.ks-code{white-space:pre-wrap;font-family:var(--font-body);font-size:.9rem;color:var(--ink)}
+.ks-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+.ks-flag-list{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.ks-flag{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;color:var(--crit)}
+.ks-flag.clean{color:var(--ok)}
+a.ks-plain{color:var(--gold)}
+::selection{background:color-mix(in srgb,var(--gold) 35%,transparent)}

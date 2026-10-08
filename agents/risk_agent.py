@@ -1,57 +1,85 @@
+"""
+Risk Agent - a real ReAct agent: the LLM autonomously decides which project
+data to fetch via tools. Hardened against hallucination: it must use only
+values returned by the tools, invent nothing, and abstain when data is missing.
+Temperature 0.
+"""
+from langchain_core.tools import tool
 from langchain_groq import ChatGroq
-from tools.data_loader import get_project_summary
+from langgraph.prebuilt import create_react_agent
+
+from tools.data_loader import (
+    get_project_summary,
+    get_contractors_by_project,
+    get_pending_invoices,
+    get_delayed_phases,
+)
 from tools.calculator import calculate_project_health
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+_llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
 
 
-def run_risk_analysis(project_id: str, project_name: str) -> str:
-    """Analyze risks by combining budget + schedule data"""
-
-    # Step 1: Load the full project summary
+@tool
+def fetch_project_summary(project_id: str) -> dict:
+    """Get a consolidated snapshot of a project: budget totals, schedule delay, contractors."""
     summary = get_project_summary(project_id)
-    if not summary:
-        return f"No data found for project {project_id}"
+    return summary or {"error": f"No summary for {project_id}"}
 
-    # Step 2: Calculate overall health
-    health = calculate_project_health(
-        summary["budget"]["over_budget_pct"],
-        summary["schedule"]["overall_delay_days"]
-    )
 
-    # Step 3: Send to LLM for risk analysis
-    prompt = f"""You are a senior construction risk analyst.
-Analyze this project data and identify all risks.
+@tool
+def fetch_contractors(project_id: str) -> list:
+    """List contractors currently working on this project."""
+    return get_contractors_by_project(project_id)
 
-PROJECT: {project_name} ({project_id})
-OVERALL HEALTH: {health}
 
-BUDGET STATUS:
-- Total: ${summary['budget']['total']:,}
-- Spent: ${summary['budget']['spent']:,}
-- Over Budget: {summary['budget']['over_budget_pct']}%
-- Pending Invoices: {len(summary['budget']['pending_invoices'])}
+@tool
+def fetch_pending_invoices(project_id: str) -> list:
+    """List unapproved invoices; large or overdue ones are cash-flow risk signals."""
+    return get_pending_invoices(project_id)
 
-SCHEDULE STATUS:
-- Delay: {summary['schedule']['overall_delay_days']} days
-- Projected End: {summary['schedule']['projected_end_date']}
-- Delayed Phases: {len(summary['schedule']['delayed_phases'])}
-- Critical Path: {', '.join(summary['schedule']['critical_path'])}
 
-CONTRACTORS: {len(summary['contractors'])} active
+@tool
+def fetch_delayed_phases(project_id: str) -> list:
+    """List only phases that are behind schedule, with the recorded delay reasons."""
+    return get_delayed_phases(project_id)
 
-Provide a risk analysis with:
-1. List the top 3-5 risks, each with:
-   - Risk description (one sentence)
-   - Severity: HIGH / MEDIUM / LOW
-   - Impact: what happens if this risk materializes
-   - Mitigation: specific action to reduce the risk
 
-2. Overall risk rating for the project: CRITICAL / HIGH / MODERATE / LOW
+@tool
+def compute_health(over_budget_pct: float, delay_days: int) -> str:
+    """Classify overall health as HEALTHY / WATCH / AT RISK / CRITICAL."""
+    return calculate_project_health(over_budget_pct, delay_days)
 
+
+_TOOLS = [fetch_project_summary, fetch_contractors, fetch_pending_invoices,
+          fetch_delayed_phases, compute_health]
+
+_SYSTEM = """You are a senior construction risk analyst.
+
+Use the available tools to gather the data you need. Do not guess, call tools to
+get real numbers. You may call multiple tools.
+
+STRICT DATA RULES:
+- Reference ONLY numbers, names and dates returned by the tools. Copy them exactly.
+- Do NOT invent, estimate, or infer any figure, percentage, name, or date.
+- If a value is not returned by any tool, write 'not in records' instead of guessing.
+
+Once you have enough information, produce a risk analysis with:
+1. Top 3-5 risks, each with: one-sentence description, Severity (HIGH/MEDIUM/LOW),
+   Impact, and a specific Mitigation.
+2. Overall risk rating: CRITICAL / HIGH / MODERATE / LOW.
 3. One paragraph summary with your top recommendation.
 
-Be specific. Reference actual numbers from the data."""
+Be specific and use only the numbers from the tool outputs."""
 
-    response = llm.invoke(prompt)
-    return response.content
+_risk_agent = create_react_agent(_llm, _TOOLS, state_modifier=_SYSTEM)
+
+
+def run_risk_analysis(project_id: str, project_name: str, feedback: str = "") -> str:
+    user_msg = f"Analyze risks for project {project_id} ({project_name})."
+    if feedback:
+        user_msg += (
+            f"\n\nPrior version was rejected. Fix these issues and remove any detail "
+            f"not returned by the tools:\n{feedback}"
+        )
+    result = _risk_agent.invoke({"messages": [("user", user_msg)]})
+    return result["messages"][-1].content

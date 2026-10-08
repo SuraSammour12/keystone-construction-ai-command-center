@@ -1,28 +1,40 @@
+"""
+Schedule analysis agent. Hardened against hallucination: strict data rules,
+temperature 0, and abstention when data is missing. Schedule data is the
+project's recorded schedule of record.
+"""
 from langchain_groq import ChatGroq
 from tools.data_loader import get_schedule_by_project, get_delayed_phases
 from tools.calculator import calculate_schedule_risk
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0)
+
+STRICT = (
+    "STRICT DATA RULES:\n"
+    "- Use ONLY the dates, phases and day counts in the DATA below.\n"
+    "- Do NOT invent or estimate any date, number, or name not present in the DATA.\n"
+    "- If something is not in the DATA, write 'not in records'.\n\n"
+)
 
 
-def run_schedule_analysis(project_id: str, project_name: str) -> str:
-    """Analyze schedule status for a given project using real data + LLM interpretation"""
-
-    # Step 1: Load raw data
+def run_schedule_analysis(project_id: str, project_name: str, feedback: str = "") -> str:
     schedule = get_schedule_by_project(project_id)
     if not schedule:
-        return f"No schedule data found for project {project_id}"
+        return f"No schedule data in records for {project_id}."
 
     delayed_phases = get_delayed_phases(project_id)
     risk_level = calculate_schedule_risk(schedule["overall_delay_days"])
 
-    # Step 2: Send to LLM for professional analysis
-    prompt = f"""You are a senior construction schedule analyst.
-Analyze this schedule data and write a professional analysis.
+    feedback_section = ""
+    if feedback:
+        feedback_section = (
+            f"\n\nREVISION REQUIRED. Fix these issues and remove any detail not in the DATA:\n{feedback}\n"
+        )
 
-PROJECT: {project_name} ({project_id})
+    prompt = f"""{STRICT}You are a senior construction schedule analyst.
 
-OVERALL SCHEDULE:
+DATA for {project_name} ({project_id}):
+OVERALL:
 - Overall Delay: {schedule['overall_delay_days']} days
 - Projected End Date: {schedule['projected_end_date']}
 - Risk Level: {risk_level}
@@ -31,40 +43,26 @@ OVERALL SCHEDULE:
 ALL PHASES:
 {_format_phases(schedule['phases'])}
 
-DELAYED PHASES ONLY ({len(delayed_phases)}):
+DELAYED PHASES ({len(delayed_phases)}):
 {_format_delayed(delayed_phases)}
 
-Write a 3-4 paragraph analysis covering:
-1. Overall schedule health - is the project on time?
-2. Root causes of delays - what went wrong and why?
-3. Impact on future phases - will current delays cascade?
-4. Recommendations - specific actions to get back on track
+Write a 3-4 paragraph schedule analysis covering overall health, root causes of
+delays (from the recorded reasons), impact on future phases, and recommendations.
+Use only the dates and numbers in the DATA.{feedback_section}"""
 
-Be specific with dates and numbers. No generic advice."""
-
-    response = llm.invoke(prompt)
-    return response.content
+    return llm.invoke(prompt).content
 
 
 def _format_phases(phases: list) -> str:
-    """Format all phases into readable text"""
-    lines = []
-    for p in phases:
-        lines.append(
-            f"- {p['phase']}: {p['status']} | "
-            f"Planned: {p['planned_start']} to {p['planned_end']} | "
-            f"Delay: {p['delay_days']} days"
-        )
-    return "\n".join(lines)
+    return "\n".join(
+        f"- {p['phase']}: {p['status']} | Planned: {p['planned_start']} to {p['planned_end']} "
+        f"| Delay: {p['delay_days']} days" for p in phases
+    )
 
 
 def _format_delayed(delayed: list) -> str:
-    """Format only delayed phases with reasons"""
     if not delayed:
         return "No delayed phases."
-    lines = []
-    for p in delayed:
-        lines.append(
-            f"- {p['phase']}: {p['delay_days']} days delayed — Reason: {p['delay_reason']}"
-        )
-    return "\n".join(lines)
+    return "\n".join(
+        f"- {p['phase']}: {p['delay_days']} days delayed - Reason: {p['delay_reason']}" for p in delayed
+    )
